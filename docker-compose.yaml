@@ -1,0 +1,29 @@
+services:
+  agent.izdrail.com:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        WWWUSER: '${WWWUSER:-1000}'
+        WWWGROUP: '${WWWGROUP:-1001}'
+    image: izdrail/agent.izdrail.com
+    container_name: agent.izdrail.com
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    ports:
+      - '1602:1602'
+      - '1603:1603'
+    environment:
+      WWWUSER: '${WWWUSER}'
+      WWWGROUP: '${WWWGROUP}'
+      LARAVEL_SAIL: 1
+      IGNITION_LOCAL_SITES_PATH: '${PWD}'
+    volumes:
+      - '.:/app'
+    networks:
+      - sail
+
+
+networks:
+  sail:
+    driver: bridge
