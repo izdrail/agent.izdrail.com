@@ -1,5 +1,5 @@
 # 3D GPT 
-
+![3D Chat](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ah8r75v3edx8atxje7ir.png)
 3D GPT is a project primarily aimed at technical demonstration.
 
 3D GPT is a demo application that allows users to easily have conversations with 3D characters in a browser.
