@@ -16,6 +16,9 @@ RUN node -v && npm -v
 # Upgrade npm to the latest
 RUN npm install -g npm@latest
 
+# Install Next.js globally
+RUN npm install -g next@latest
+
 # Copy application code
 COPY . .
 
