@@ -3,6 +3,7 @@ import { Model } from "./model";
 import { loadVRMAnimation } from "@/lib/VRMAnimation/loadVRMAnimation";
 import { buildUrl } from "@/utils/buildUrl";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 /**
  * three.js
@@ -17,6 +18,7 @@ export class Viewer {
   private _scene: THREE.Scene;
   private _camera?: THREE.PerspectiveCamera;
   private _cameraControls?: OrbitControls;
+  private _glbScene?: THREE.Group;
 
   constructor() {
     this.isReady = false;
@@ -38,36 +40,77 @@ export class Viewer {
     this._clock.start();
   }
 
-  public loadVrm(url: string) {
-    if (this.model?.vrm) {
+  public loadVrm(url: string, scale: number = 1.0, position: { x: number, y: number, z: number } = { x: 0, y: 0, z: 0 }): Promise<void> {
+    if (this.model?.scene) {
       this.unloadVRM();
     }
 
     // gltf and vrm
     this.model = new Model(this._camera || new THREE.Object3D());
-    this.model.loadVRM(url).then(async () => {
-      if (!this.model?.vrm) return;
+    return this.model.loadVRM(url).then(async () => {
+      if (!this.model?.scene) return;
 
       // Disable frustum culling
-      this.model.vrm.scene.traverse((obj) => {
+      this.model.scene.traverse((obj) => {
         obj.frustumCulled = false;
       });
 
-      this._scene.add(this.model.vrm.scene);
+      // Apply scaling and positioning to the character
+      this.model.scene.scale.set(scale, scale, scale);
+      this.model.scene.position.set(position.x, position.y, position.z);
 
-      const vrma = await loadVRMAnimation(buildUrl("/idle_loop.vrma"));
-      if (vrma) this.model.loadAnimation(vrma);
+      this._scene.add(this.model.scene);
 
-      // HACK: 
+      if (this.model.vrm) {
+        const vrma = await loadVRMAnimation(buildUrl("/idle_loop.vrma"));
+        if (vrma) this.model.loadAnimation(vrma);
+      }
+
+      // HACK:
       requestAnimationFrame(() => {
         this.resetCamera();
       });
     });
   }
 
+  public loadGlb(url: string, scale: number = 1.0, position: { x: number, y: number, z: number } = { x: 0, y: 0, z: 0 }): Promise<void> {
+    // Remove any previously loaded GLB
+    if (this._glbScene) {
+      this._scene.remove(this._glbScene);
+      this._glbScene = undefined;
+    }
+
+    const loader = new GLTFLoader();
+    return new Promise((resolve, reject) => {
+      loader.load(
+        url,
+        (gltf) => {
+          this._glbScene = gltf.scene;
+          // Enable frustum culling (huge performance gain for 370MB models)
+          this._glbScene.traverse((obj) => {
+            obj.frustumCulled = true;
+          });
+
+          // Apply scale and position
+          this._glbScene.scale.set(scale, scale, scale);
+          this._glbScene.position.set(position.x, position.y, position.z);
+
+          this._scene.add(this._glbScene);
+          console.log("GLB model loaded:", url);
+          resolve();
+        },
+        undefined,
+        (error) => {
+          console.error("Error loading GLB model:", error);
+          reject(error);
+        }
+      );
+    });
+  }
+
   public unloadVRM(): void {
-    if (this.model?.vrm) {
-      this._scene.remove(this.model.vrm.scene);
+    if (this.model?.scene) {
+      this._scene.remove(this.model.scene);
       this.model?.unLoadVrm();
     }
   }
@@ -79,15 +122,17 @@ export class Viewer {
     const parentElement = canvas.parentElement;
     const width = parentElement?.clientWidth || canvas.width;
     const height = parentElement?.clientHeight || canvas.height;
-    // renderer
+    // Optimized renderer for large models and high-res tablets
     this._renderer = new THREE.WebGLRenderer({
       canvas: canvas,
       alpha: true,
       antialias: true,
+      powerPreference: "high-performance",
+      precision: "mediump"
     });
     this._renderer.outputEncoding = THREE.sRGBEncoding;
     this._renderer.setSize(width, height);
-    this._renderer.setPixelRatio(window.devicePixelRatio);
+    this._renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap at 2 for performance on high-DPI tablets
 
     // camera
     this._camera = new THREE.PerspectiveCamera(20.0, width / height, 0.1, 20.0);
@@ -134,7 +179,8 @@ export class Viewer {
    * VRM camera reset head position
    */
   public resetCamera() {
-    const headNode = this.model?.vrm?.humanoid.getNormalizedBoneNode("head");
+    const vrm = this.model?.vrm as any;
+    const headNode = vrm?.humanoid?.getNormalizedBoneNode("head");
 
     if (headNode) {
       const headWPos = headNode.getWorldPosition(new THREE.Vector3());

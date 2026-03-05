@@ -1,4 +1,5 @@
 import "@/styles/globals.css";
+import "@/styles/garden.css";
 import type { AppProps } from "next/app";
 import "@charcoal-ui/icons";
 

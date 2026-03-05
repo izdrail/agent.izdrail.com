@@ -1,9 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Message } from "@/features/messages/messages";
+import { IconButton } from "./iconButton";
+
 type Props = {
   messages: Message[];
+  onClose: () => void;
 };
-export const ChatLog = ({ messages }: Props) => {
+
+export const ChatLog = ({ messages, onClose }: Props) => {
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -19,36 +23,44 @@ export const ChatLog = ({ messages }: Props) => {
       block: "center",
     });
   }, [messages]);
+
   return (
-    <div className="absolute w-col-span-6 max-w-full h-[100svh] pb-64">
-      <div className="max-h-full px-16 pt-104 pb-64 overflow-y-auto scroll-hidden">
-        {messages.map((msg, i) => {
-          return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-24 bg-black/40 backdrop-blur-xl">
+      <div className="absolute top-24 right-24">
+        <IconButton iconName="24/Close" isProcessing={false} onClick={onClose} />
+      </div>
+
+      <div className="w-full max-w-2xl h-full flex flex-col pt-64 pb-24 overflow-hidden">
+        <div className="text-white/40 text-[10px] tracking-[6px] uppercase font-bold mb-24 text-center">Conversation History</div>
+
+        <div className="flex-1 overflow-y-auto pr-8 custom-scrollbar scroll-hidden">
+          {messages.map((msg, i) => (
             <div key={i} ref={messages.length - 1 === i ? chatScrollRef : null}>
               <Chat role={msg.role} message={msg.content} />
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
     </div>
   );
 };
 
 const Chat = ({ role, message }: { role: string; message: string }) => {
-  const roleColor =
-    role === "assistant" ? "bg-secondary text-white " : "bg-base text-primary";
-  const roleText = role === "assistant" ? "text-secondary" : "text-primary";
-  const offsetX = role === "user" ? "pl-40" : "pr-40";
+  const isAssistant = role === "assistant";
 
   return (
-    <div className={`mx-auto max-w-sm my-16 ${offsetX}`}>
-      <div
-        className={`px-24 py-8 rounded-t-8 font-bold tracking-wider ${roleColor}`}
-      >
-        {role === "assistant" ? "CHARACTER" : "YOU"}
+    <div className={`flex flex-col mb-24 ${isAssistant ? "items-start" : "items-end"}`}>
+      <div className="text-[9px] tracking-[3px] uppercase text-white/30 mb-8 px-8">
+        {isAssistant ? "Character" : "You"}
       </div>
-      <div className="px-24 py-16 bg-white rounded-b-8">
-        <div className={`typography-16 font-bold ${roleText}`}>{message}</div>
+      <div
+        className={`max-w-[85%] px-20 py-14 rounded-2xl text-[15px] leading-relaxed shadow-xl border
+          ${isAssistant
+            ? "bg-white/10 backdrop-blur-md border-white/10 text-white/90 rounded-tl-none font-light"
+            : "bg-teal-900/40 backdrop-blur-md border-teal-500/20 text-white/95 rounded-tr-none font-medium"
+          }`}
+      >
+        {message}
       </div>
     </div>
   );

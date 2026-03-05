@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.idea
+__pycache__
+*.log
+Dockerfile
+docker-compose.yaml
+makefile

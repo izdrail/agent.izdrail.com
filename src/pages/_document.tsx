@@ -12,11 +12,15 @@ export default function Document() {
           crossOrigin=""
         />
         <link
+          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cinzel:wght@400;600&family=Lato:wght@300;400&display=swap"
+          rel="stylesheet"
+        />
+        <link
           href="https://fonts.googleapis.com/css2?family=M+PLUS+2&family=Montserrat&display=swap"
           rel="stylesheet"
         />
       </Head>
-      <body style={{ backgroundImage: `url(${buildUrl("/bg-agent.png")})` }}>
+      <body>
         <Main />
         <NextScript />
       </body>

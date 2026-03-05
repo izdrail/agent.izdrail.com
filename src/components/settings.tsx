@@ -44,145 +44,133 @@ export const Settings = ({
   onChangeKoeiromapKey,
 }: Props) => {
   return (
-    <div className="absolute z-40 w-full h-full bg-white/80 backdrop-blur ">
-      <div className="absolute m-24">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-2xl overflow-y-auto custom-scrollbar">
+      <div className="absolute top-24 right-24">
         <IconButton
           iconName="24/Close"
           isProcessing={false}
           onClick={onClickClose}
         ></IconButton>
       </div>
-      <div className="max-h-full overflow-auto">
-        <div className="text-text1 max-w-3xl mx-auto px-24 py-64 ">
-          <div className="my-24 typography-32 font-bold">Settings</div>
 
-          <div className="my-40">
-            <div className="my-16 typography-20 font-bold">
-              Virtual Model
-            </div>
-            <div className="my-8">
-              <TextButton onClick={onClickOpenVrmFile}>Open VRM</TextButton>
-            </div>
+      <div className="max-w-3xl mx-auto px-24 py-80">
+        <div className="text-white/40 text-[11px] tracking-[6px] uppercase font-bold mb-16">Assistant Dashboard</div>
+        <div className="text-white/95 text-4xl font-Cinzel mb-56 border-b border-white/5 pb-24">Settings</div>
+
+        {/* VRM Section */}
+        <section className="mb-56">
+          <div className="text-white/80 text-xl font-Cinzel mb-20 flex items-center gap-12">
+            <span className="opacity-50 text-sm">01</span> Virtual Presence
           </div>
-          <div className="my-40">
-            <div className="my-8">
-              <div className="my-16 typography-20 font-bold">
-                Character Settings (System Prompt)
-              </div>
-              <TextButton onClick={onClickResetSystemPrompt}>
-                Reset Character Settings
-              </TextButton>
-            </div>
+          <div className="bg-white/5 rounded-2xl p-24 border border-white/10 backdrop-blur-md">
+            <p className="text-white/50 text-sm mb-20 leading-relaxed italic">
+              Upload a .vrm file to change the visual personification of your guide.
+            </p>
+            <TextButton onClick={onClickOpenVrmFile}>Upload NEW VRM</TextButton>
+          </div>
+        </section>
 
+        {/* System Prompt Section */}
+        <section className="mb-56">
+          <div className="text-white/80 text-xl font-Cinzel mb-20 flex items-center gap-12">
+            <span className="opacity-50 text-sm">02</span> Personality & Knowledge
+          </div>
+          <div className="bg-white/5 rounded-2xl p-24 border border-white/10 backdrop-blur-md">
+            <p className="text-white/50 text-sm mb-20 leading-relaxed italic">
+              Define the AI's persona, its knowledge of Al-Rawda, and its conversational style.
+            </p>
             <textarea
               value={systemPrompt}
               onChange={onChangeSystemPrompt}
-              className="px-16 py-8  bg-surface1 hover:bg-surface1-hover h-168 rounded-8 w-full"
+              className="px-20 py-16 bg-black/30 border border-white/10 text-white/90 h-48 rounded-xl w-full focus:border-teal-500/50 outline-none transition-all mb-16 font-light leading-relaxed"
+              style={{ minHeight: "160px" }}
             ></textarea>
+            <TextButton onClick={onClickResetSystemPrompt}>Reset to Default Persona</TextButton>
           </div>
-          <div className="my-40">
-          
-           
+        </section>
 
-
-            <div className="mt-16 font-bold">Presets</div>
-            <div className="my-8 grid grid-cols-2 gap-[8px]">
-              <TextButton
-                onClick={() =>
-                  onChangeKoeiroParam(PRESET_A.speakerX, PRESET_A.speakerY)
-                }
-              >
-                Cute
-              </TextButton>
-              <TextButton
-                onClick={() =>
-                  onChangeKoeiroParam(PRESET_B.speakerX, PRESET_B.speakerY)
-                }
-              >
-                Energetic
-              </TextButton>
-              <TextButton
-                onClick={() =>
-                  onChangeKoeiroParam(PRESET_C.speakerX, PRESET_C.speakerY)
-                }
-              >
-                Cool
-              </TextButton>
-              <TextButton
-                onClick={() =>
-                  onChangeKoeiroParam(PRESET_D.speakerX, PRESET_D.speakerY)
-                }
-              >
-                Deep/Mature
-              </TextButton>
-            </div>
-            <div className="my-24">
-              <div className="select-none">x : {koeiroParam.speakerX}</div>
-              <input
-                type="range"
-                min={-10}
-                max={10}
-                step={0.001}
-                value={koeiroParam.speakerX}
-                className="mt-8 mb-16 input-range"
-                onChange={(e) => {
-                  onChangeKoeiroParam(
-                    Number(e.target.value),
-                    koeiroParam.speakerY
-                  );
-                }}
-              ></input>
-              <div className="select-none">y : {koeiroParam.speakerY}</div>
-              <input
-                type="range"
-                min={-10}
-                max={10}
-                step={0.001}
-                value={koeiroParam.speakerY}
-                className="mt-8 mb-16 input-range"
-                onChange={(e) => {
-                  onChangeKoeiroParam(
-                    koeiroParam.speakerX,
-                    Number(e.target.value)
-                  );
-                }}
-              ></input>
-            </div>
+        {/* Presets Section */}
+        <section className="mb-56">
+          <div className="text-white/80 text-xl font-Cinzel mb-20 flex items-center gap-12">
+            <span className="opacity-50 text-sm">03</span> Voice Calibration
           </div>
-          {chatLog.length > 0 && (
-            <div className="my-40">
-              <div className="my-8 grid-cols-2">
-                <div className="my-16 typography-20 font-bold">Conversation History</div>
-                <TextButton onClick={onClickResetChatLog}>
-                  Reset Conversation History
-                </TextButton>
+          <div className="bg-white/5 rounded-2xl p-24 border border-white/10 backdrop-blur-md">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-32">
+              {[
+                { label: "Cute", preset: PRESET_A },
+                { label: "Energetic", preset: PRESET_B },
+                { label: "Cool", preset: PRESET_C },
+                { label: "Mature", preset: PRESET_D },
+              ].map((p) => (
+                <button
+                  key={p.label}
+                  onClick={() => onChangeKoeiroParam(p.preset.speakerX, p.preset.speakerY)}
+                  className="px-12 py-10 rounded-xl bg-white/5 border border-white/10 text-white/70 text-xs hover:bg-white/10 hover:text-white transition-all uppercase tracking-widest"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-24">
+              <div>
+                <div className="flex justify-between text-[10px] uppercase tracking-widest text-white/30 mb-8">
+                  <span>Pitch Axis (X)</span>
+                  <span className="text-teal-400/60 font-mono">{koeiroParam.speakerX.toFixed(3)}</span>
+                </div>
+                <input
+                  type="range" min={-10} max={10} step={0.001}
+                  value={koeiroParam.speakerX}
+                  className="w-full h-1 bg-white/10 appearance-none rounded-full cursor-pointer accent-teal-500"
+                  onChange={(e) => onChangeKoeiroParam(Number(e.target.value), koeiroParam.speakerY)}
+                />
               </div>
-              <div className="my-8">
-                {chatLog.map((value, index) => {
-                  return (
-                    <div
-                      key={index}
-                      className="my-8 grid grid-flow-col  grid-cols-[min-content_1fr] gap-x-fixed"
-                    >
-                      <div className="w-[64px] py-8">
-                        {value.role === "assistant" ? "Character" : "You"}
-                      </div>
-                      <input
-                        key={index}
-                        className="bg-surface1 hover:bg-surface1-hover rounded-8 w-full px-16 py-8"
-                        type="text"
-                        value={value.content}
-                        onChange={(event) => {
-                          onChangeChatLog(index, event.target.value);
-                        }}
-                      ></input>
+              <div>
+                <div className="flex justify-between text-[10px] uppercase tracking-widest text-white/30 mb-8">
+                  <span>Tone Axis (Y)</span>
+                  <span className="text-teal-400/60 font-mono">{koeiroParam.speakerY.toFixed(3)}</span>
+                </div>
+                <input
+                  type="range" min={-10} max={10} step={0.001}
+                  value={koeiroParam.speakerY}
+                  className="w-full h-1 bg-white/10 appearance-none rounded-full cursor-pointer accent-teal-500"
+                  onChange={(e) => onChangeKoeiroParam(koeiroParam.speakerX, Number(e.target.value))}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {chatLog.length > 0 && (
+          <section className="mb-56">
+            <div className="text-white/80 text-xl font-Cinzel mb-20 flex items-center gap-12">
+              <span className="opacity-50 text-sm">04</span> Memory Management
+            </div>
+            <div className="bg-white/5 rounded-2xl p-24 border border-white/10 backdrop-blur-md">
+              <p className="text-white/50 text-sm mb-24 leading-relaxed italic">
+                Review and edit the current session memory. Clearing this will reset the guide's context.
+              </p>
+
+              <div className="space-y-12 max-h-96 overflow-y-auto pr-8 custom-scrollbar mb-24">
+                {chatLog.map((value, index) => (
+                  <div key={index} className="flex gap-16 items-start bg-black/20 p-12 rounded-xl border border-white/5">
+                    <div className="text-[9px] uppercase tracking-tighter text-white/30 w-16 pt-4">
+                      {value.role === "assistant" ? "AI" : "YOU"}
                     </div>
-                  );
-                })}
+                    <input
+                      className="bg-transparent border-none text-white/80 text-sm focus:text-white outline-none w-full font-light"
+                      type="text"
+                      value={value.content}
+                      onChange={(event) => onChangeChatLog(index, event.target.value)}
+                    />
+                  </div>
+                ))}
               </div>
+
+              <TextButton onClick={onClickResetChatLog}>Clear Session Memory</TextButton>
             </div>
-          )}
-        </div>
+          </section>
+        )}
       </div>
     </div>
   );

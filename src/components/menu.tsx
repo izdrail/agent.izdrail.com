@@ -14,6 +14,10 @@ type Props = {
   koeiroParam: KoeiroParam;
   assistantMessage: string;
   koeiromapKey: string;
+  showSettings: boolean;
+  setShowSettings: (show: boolean) => void;
+  showChatLog: boolean;
+  setShowChatLog: (show: boolean) => void;
   onChangeSystemPrompt: (systemPrompt: string) => void;
   onChangeAiKey: (key: string) => void;
   onChangeChatLog: (index: number, text: string) => void;
@@ -29,6 +33,10 @@ export const Menu = ({
   koeiroParam,
   assistantMessage,
   koeiromapKey,
+  showSettings,
+  setShowSettings,
+  showChatLog,
+  setShowChatLog,
   onChangeSystemPrompt,
   onChangeAiKey,
   onChangeChatLog,
@@ -37,8 +45,6 @@ export const Menu = ({
   handleClickResetSystemPrompt,
   onChangeKoeiromapKey,
 }: Props) => {
-  const [showSettings, setShowSettings] = useState(false);
-  const [showChatLog, setShowChatLog] = useState(false);
   const { viewer } = useContext(ViewerContext);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -100,33 +106,7 @@ export const Menu = ({
 
   return (
     <>
-      <div className="absolute z-10 m-24">
-        <div className="grid grid-flow-col gap-[8px]">
-          <IconButton
-            iconName="24/Menu"
-            label="Settings"
-            isProcessing={false}
-            onClick={() => setShowSettings(true)}
-          ></IconButton>
-          {showChatLog ? (
-            <IconButton
-              iconName="24/CommentOutline"
-              label="History"
-              isProcessing={false}
-              onClick={() => setShowChatLog(false)}
-            />
-          ) : (
-            <IconButton
-              iconName="24/CommentFill"
-              label="History"
-              isProcessing={false}
-              disabled={chatLog.length <= 0}
-              onClick={() => setShowChatLog(true)}
-            />
-          )}
-        </div>
-      </div>
-      {showChatLog && <ChatLog messages={chatLog} />}
+      {showChatLog && <ChatLog messages={chatLog} onClose={() => setShowChatLog(false)} />}
       {showSettings && (
         <Settings
           openAiKey={openAiKey}

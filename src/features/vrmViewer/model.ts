@@ -9,6 +9,7 @@ import { Screenplay } from "../messages/messages";
 
 export class Model {
   public vrm?: VRM | null;
+  public scene?: THREE.Group;
   public mixer?: THREE.AnimationMixer;
   public emoteController?: EmoteController;
 
@@ -18,8 +19,6 @@ export class Model {
   constructor(lookAtTargetParent: THREE.Object3D) {
     this._lookAtTargetParent = lookAtTargetParent;
     this._lipSync = new LipSync(new AudioContext());
-
- 
   }
 
   public async loadVRM(url: string): Promise<void> {
@@ -33,19 +32,26 @@ export class Model {
 
     const gltf = await loader.loadAsync(url);
 
-    const vrm = (this.vrm = gltf.userData.vrm);
-    vrm.scene.name = "VRMRoot";
+    this.scene = gltf.scene;
+    this.vrm = gltf.userData.vrm;
 
-    VRMUtils.rotateVRM0(vrm);
-    this.mixer = new THREE.AnimationMixer(vrm.scene);
-
-    this.emoteController = new EmoteController(vrm, this._lookAtTargetParent);
+    if (this.vrm) {
+      this.scene.name = "VRMRoot";
+      // Cast needed: rotateVRM0 types don't expose VRMCore in this package version
+      VRMUtils.rotateVRM0(this.vrm as any);
+      this.mixer = new THREE.AnimationMixer(this.scene);
+      this.emoteController = new EmoteController(this.vrm, this._lookAtTargetParent);
+    } else {
+      this.scene.name = "GLTFScene";
+      this.mixer = new THREE.AnimationMixer(this.scene);
+    }
   }
 
   public unLoadVrm() {
-    if (this.vrm) {
-      VRMUtils.deepDispose(this.vrm.scene);
+    if (this.scene) {
+      VRMUtils.deepDispose(this.scene);
       this.vrm = null;
+      this.scene = undefined;
     }
   }
 

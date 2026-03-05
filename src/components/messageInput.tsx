@@ -19,7 +19,7 @@ export const MessageInput = ({
   onClickSendButton,
 }: Props) => {
   return (
-    <div className="absolute bottom-0 z-20 w-screen">
+    <div className="absolute bottom-0 z-20 w-screen hidden">
       <div className="bg-base text-black">
         <div className="mx-auto max-w-4xl p-16">
           <div className="grid grid-flow-col gap-[8px] grid-cols-[min-content_1fr_min-content]">
@@ -55,7 +55,7 @@ export const MessageInput = ({
             />
           </div>
         </div>
-        <div style={{ height: "100%", display:"block", minHeight:"3vh" }} className="py-4 bg-[#101828] text-center text-white font-Montserrat pt-16 pb-16">
+        <div style={{ height: "100%", display: "block", minHeight: "3vh" }} className="py-4 bg-[#101828] text-center text-white font-Montserrat pt-16 pb-16">
           <a href="https://izdrail.com" target="_blank" title="Personal 3d assistant">
             Personal Assistant.
           </a>

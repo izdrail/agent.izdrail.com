@@ -11,19 +11,13 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     ports:
-      - '1602:1602'
-      - '1603:1603'
-    environment:
-      WWWUSER: '${WWWUSER}'
-      WWWGROUP: '${WWWGROUP}'
-      LARAVEL_SAIL: 1
-      IGNITION_LOCAL_SITES_PATH: '${PWD}'
+      - '3000:3000'
     volumes:
       - '.:/app'
+      - '/app/node_modules'
+      - '/app/.next'
     networks:
       - sail
-
-
 networks:
   sail:
     driver: bridge

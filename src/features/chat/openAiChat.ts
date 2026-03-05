@@ -1,87 +1,102 @@
-import { Configuration, OpenAIApi } from "openai";
 import { Message } from "../messages/messages";
 
-export async function getChatResponse(messages: Message[], apiKey: string) {
-  if (!apiKey) {
-    throw new Error("Invalid API Key");
-  }
+const OLLAMA_API = "https://ai.izdrail.com/api/chat";
 
-  const configuration = new Configuration({
-    apiKey: apiKey,
-  });
-  // Workaround to eliminate errors when calling the API from the browser
-  // https://github.com/openai/openai-node/issues/6#issuecomment-1492814621
-  delete configuration.baseOptions.headers["User-Agent"];
-
-  const openai = new OpenAIApi(configuration);
-
-  const { data } = await openai.createChatCompletion({
-    model: "gpt-3.5-turbo",
-    messages: messages,
-  });
-
-  const [aiRes] = data.choices;
-  const message = aiRes.message?.content || "An error has occurred";
-
-  return { message: message };
-}
-
-export async function getChatResponseStream(
-  messages: Message[],
-  apiKey: string
-) {
-
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${apiKey}`,
-  };
-  const res = await fetch("https://ai.izdrail.com/v1/chat/completions", {
-    headers: headers,
+export async function getChatResponse(messages: Message[]) {
+  const res = await fetch(OLLAMA_API, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "gemma3:1b",
-      messages: messages,
-      stream: true,
-      max_tokens: 200,
+      model: "gemma3:270m",
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+      stream: false,
     }),
   });
 
-  const reader = res.body?.getReader();
-  if (res.status !== 200 || !reader) {
-    throw new Error("Something went wrong");
+  if (!res.ok) {
+    throw new Error(`Ollama API Error: ${res.status} ${res.statusText}`);
   }
 
+  const data = await res.json();
+  const message = data.message?.content || "An error has occurred";
+
+  return { message };
+}
+
+export async function getChatResponseStream(messages: Message[]) {
+  const res = await fetch(OLLAMA_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "gemma3:270m",
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+      stream: true,
+    }),
+  });
+
+  if (!res.ok || !res.body) {
+    throw new Error(`Failed to connect to Ollama stream: ${res.status}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+
   const stream = new ReadableStream({
-    async start(controller: ReadableStreamDefaultController) {
-      const decoder = new TextDecoder("utf-8");
+    async start(controller) {
+      let buffer = "";
+
       try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const data = decoder.decode(value);
-          const chunks = data
-            .split("data:")
-            .filter((val) => !!val && val.trim() !== "[DONE]");
-          for (const chunk of chunks) {
-            const json = JSON.parse(chunk);
-            const messagePiece = json.choices[0].delta.content;
-            if (!!messagePiece) {
-              controller.enqueue(messagePiece);
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+
+          // Keep the last incomplete line in the buffer
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.trim()) continue;
+
+            try {
+              const json = JSON.parse(line);
+              const content = json.message?.content;
+
+              // Only enqueue if there's actual content
+              if (content) {
+                controller.enqueue(content);
+              }
+
+              // Check if this is the final chunk
+              if (json.done) {
+                controller.close();
+                reader.releaseLock();
+                return;
+              }
+            } catch (parseError) {
+              console.error("Failed to parse JSON line:", line, parseError);
             }
           }
         }
-      } catch (error) {
-        controller.error(error);
+      } catch (err) {
+        controller.error(err);
       } finally {
+        try {
+          controller.close();
+        } catch {
+          // Stream already closed
+        }
         reader.releaseLock();
-        controller.close();
       }
     },
   });
 
   return stream;
 }
-
-
-
