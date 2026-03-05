@@ -23,7 +23,7 @@ export default function VrmViewer({ onLoaded, showCharacter = true }: Props) {
 
                 // You can also scale up the room instead of scaling down the character
                 // and move the room so the chair aligns with the character
-                const glbPromise = viewer.loadGlb(buildUrl("/model.glb"), 1.0, { x: 0, y: 0, z: 0 });
+                const glbPromise = viewer.loadGlb(buildUrl("/model2.glb"), 1.0, { x: 0, y: 0, z: 0 });
 
                 Promise.all([vrmPromise, glbPromise]).then(() => {
                     onLoaded?.();

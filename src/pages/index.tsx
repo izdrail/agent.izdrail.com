@@ -15,76 +15,7 @@ import { Menu } from "@/components/menu";
 import { IconButton } from "@/components/iconButton";
 import { Meta } from "@/components/meta";
 import Link from "next/link";
-
-interface Hotspot {
-  id: string;
-  x: number;
-  y: number;
-  icon: string;
-  label: string;
-  title: string;
-  subtitle: string;
-  desc: string;
-  facts: { label: string; value: string }[];
-  tags: { text: string; color: string }[];
-}
-
-const HOTSPOTS: Hotspot[] = [
-  {
-    id: "dry-garden",
-    x: 960,
-    y: 650,
-    icon: "🏜️",
-    label: "Dry Garden",
-    title: "Al-Rawda Arid Zone",
-    subtitle: "Beauty in Resilience",
-    desc: "A stunning xeriscape showcasing desert flora and specialized irrigation techniques, proving that a garden can flourish even in the most challenging conditions.",
-    facts: [
-      { label: "Species", value: "32 Native" },
-      { label: "Irrigation", value: "Sub-surface Drip" },
-    ],
-    tags: [
-      { text: "Sustainable", color: "rgba(201, 184, 154, 0.4)" },
-      { text: "Resilient", color: "rgba(255, 165, 0, 0.2)" },
-    ],
-  },
-  {
-    id: "water-garden",
-    x: 500,
-    y: 800,
-    icon: "💧",
-    label: "Water Garden",
-    title: "The Reflecting Pools",
-    subtitle: "Lush Aquatic Sanctuary",
-    desc: "A network of interconnected pools and canals that cool the surrounding area and harbor rare water lilies, symbolizing the cycle of life.",
-    facts: [
-      { label: "Cooling Effect", value: "-4°C" },
-      { label: "Purification", value: "Bio-filter" },
-    ],
-    tags: [
-      { text: "Lush", color: "rgba(74, 181, 176, 0.4)" },
-      { text: "Cooling", color: "rgba(0, 191, 255, 0.2)" },
-    ],
-  },
-  {
-    id: "stats",
-    x: 1500,
-    y: 350,
-    icon: "📊",
-    label: "Statistics",
-    title: "Eco Observation Deck",
-    subtitle: "Real-time Metrics",
-    desc: "Live data from across the garden, monitoring soil moisture, solar energy harvesting, and the well-being of the Al-Rawda ecosystem.",
-    facts: [
-      { label: "Solar Energy", value: "14.2 kWh/day" },
-      { label: "Soil Health", value: "Optimal" },
-    ],
-    tags: [
-      { text: "Live Data", color: "rgba(255, 255, 255, 0.2)" },
-      { text: "Smart Tech", color: "rgba(74, 181, 176, 0.4)" },
-    ],
-  },
-];
+import { Hotspot, HOTSPOTS } from "@/features/constants/hotspotData";
 
 export default function Home() {
   const { viewer } = useContext(ViewerContext);
@@ -314,16 +245,21 @@ export default function Home() {
         ref={sceneRef}
         style={{ transform: `scale(${scale})` }}
       >
-        <div className="garden-img-wrap">
-          {!isLoaded && (
-            <>
-              <img className="garden-img" src="/bg.png" alt="Garden" />
-              <div className="vignette"></div>
-            </>
-          )}
-          <div className="absolute inset-0">
-            <VrmViewer onLoaded={handleLoaded} showCharacter={false} />
+        {!isLoaded && (
+          <div className="loading-screen animate-in fade-in duration-1000">
+            <div className="loading-flower">
+              <div className="petal-1"></div>
+              <div className="petal-2"></div>
+              <div className="petal-3"></div>
+              <div className="petal-4"></div>
+              <div className="petal-5"></div>
+            </div>
+            <div className="loading-text">Al-Rawda</div>
+            <div className="loading-status italic">Preparing the Sanctuary...</div>
           </div>
+        )}
+        <div className="absolute inset-0">
+          <VrmViewer onLoaded={handleLoaded} showCharacter={false} />
         </div>
 
         {/* TOOLTIP CARD (POP-UP ABOVE MENU) */}
@@ -381,69 +317,71 @@ export default function Home() {
           </div>
         )}
 
-        {/* BOTTOM CONTROLS (SEGMENTED GLASS BUTTONS) */}
-        <div className="bottom-controls">
-          <div className="text-[12px] tracking-[4px] text-white/30 uppercase font-bold mb-8">Discovery</div>
-          {/* Discovery Row (Hotspots) */}
-          <div className="controls-row mb-16">
-            {HOTSPOTS.map((hs) => (
-              <IconButton
-                key={`menu-${hs.id}`}
-                iconName={"24/Dot"}
-                label={hs.label}
-                isProcessing={false}
-                onClick={() => setActiveHotspot(hs)}
-                style={{
-                  background: activeHotspot?.id === hs.id ? "rgba(74, 181, 176, 0.4)" : "rgba(8, 18, 8, 0.45)",
-                  borderColor: activeHotspot?.id === hs.id ? "rgba(74, 181, 176, 0.6)" : "rgba(255, 255, 255, 0.15)"
-                }}
-              >
-                <span className="mr-8">{hs.icon}</span>
-              </IconButton>
-            ))}
-          </div>
-
-          {/* Tools Row */}
-          <div className="text-[12px] tracking-[4px] text-white/30 uppercase font-bold mb-8">Assistant</div>
-          <div className="controls-row">
+        {/* DISCOVERY SIDEBAR (RIGHT) */}
+        <div className="side-controls">
+          {HOTSPOTS.map((hs) => (
             <IconButton
-              iconName="24/Microphone"
-              label={isMicRecording ? "Listening..." : "Voice Guide"}
-              isProcessing={isMicRecording}
-              onClick={handleClickMicButton}
+              key={`menu-${hs.id}`}
+              iconName={"24/Dot"}
+              label={hs.label}
+              isProcessing={false}
+              onClick={() => setActiveHotspot(hs)}
+              className="group"
               style={{
-                background: isMicRecording ? "rgba(74, 181, 176, 0.4)" : "rgba(8, 18, 8, 0.45)",
-                borderColor: isMicRecording ? "rgba(74, 181, 176, 1)" : "rgba(255, 255, 255, 0.15)"
+                background: activeHotspot?.id === hs.id ? "rgba(74, 181, 176, 0.45)" : "rgba(8, 18, 8, 0.45)",
+                borderColor: activeHotspot?.id === hs.id ? "rgba(74, 181, 176, 0.8)" : "rgba(255, 255, 255, 0.15)",
+                padding: "16px",
+                minWidth: "60px",
+                justifyContent: "center"
+              }}
+            >
+              <span className="text-xl group-hover:scale-110 transition-transform">{hs.icon}</span>
+            </IconButton>
+          ))}
+        </div>
+
+        {/* ASSISTANT HUD (BOTTOM) */}
+        <div className="bottom-controls">
+          <IconButton
+            iconName="24/Microphone"
+            label={isMicRecording ? "Listening..." : "Voice Guide"}
+            isProcessing={isMicRecording}
+            onClick={handleClickMicButton}
+            style={{
+              background: isMicRecording ? "rgba(74, 181, 176, 0.4)" : "rgba(8, 18, 8, 0.45)",
+              borderColor: isMicRecording ? "rgba(74, 181, 176, 1)" : "rgba(255, 255, 255, 0.15)"
+            }}
+          />
+
+          <IconButton
+            iconName={showChatLog ? "24/CommentOutline" : "24/CommentFill"}
+            label="History"
+            isProcessing={false}
+            disabled={chatLog.length <= 0}
+            onClick={() => setShowChatLog(!showChatLog)}
+          />
+
+          <IconButton
+            iconName="24/Menu"
+            label="Settings"
+            isProcessing={false}
+            onClick={() => setShowSettings(true)}
+          />
+
+          <Link href="/assistant">
+            <IconButton
+              iconName="24/CommentFill"
+              label="Face-to-Face"
+              isProcessing={false}
+              style={{
+                background: "rgba(201, 184, 154, 0.2)",
+                borderColor: "rgba(201, 184, 154, 0.3)"
               }}
             />
-
-            <IconButton
-              iconName={showChatLog ? "24/CommentOutline" : "24/CommentFill"}
-              label="History"
-              isProcessing={false}
-              disabled={chatLog.length <= 0}
-              onClick={() => setShowChatLog(!showChatLog)}
-            />
-
-            <IconButton
-              iconName="24/Menu"
-              label="Settings"
-              isProcessing={false}
-              onClick={() => setShowSettings(true)}
-            />
-
-            <Link href="/assistant">
-              <IconButton
-                iconName="24/CommentFill"
-                label="Face-to-Face"
-                isProcessing={false}
-              />
-            </Link>
-          </div>
+          </Link>
         </div>
       </div>
 
-      {/* FLOATING UI ELEMENTS */}
       <Menu
         openAiKey={openAiKey}
         systemPrompt={systemPrompt}

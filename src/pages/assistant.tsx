@@ -14,6 +14,7 @@ import { Menu } from "@/components/menu";
 import { IconButton } from "@/components/iconButton";
 import { Meta } from "@/components/meta";
 import Link from "next/link";
+import { Hotspot, HOTSPOTS } from "@/features/constants/hotspotData";
 
 export default function AssistantPage() {
     const { viewer } = useContext(ViewerContext);
@@ -232,10 +233,17 @@ export default function AssistantPage() {
             >
                 <div className="garden-img-wrap">
                     {!isLoaded && (
-                        <>
-                            <img className="garden-img" src="/bg.png" alt="Garden" />
-                            <div className="vignette"></div>
-                        </>
+                        <div className="loading-screen animate-in fade-in duration-1000">
+                            <div className="loading-flower">
+                                <div className="petal-1"></div>
+                                <div className="petal-2"></div>
+                                <div className="petal-3"></div>
+                                <div className="petal-4"></div>
+                                <div className="petal-5"></div>
+                            </div>
+                            <div className="loading-text">Al-Rawda</div>
+                            <div className="loading-status italic">Summoning your Guide...</div>
+                        </div>
                     )}
                     <div className="absolute inset-0">
                         <VrmViewer onLoaded={handleLoaded} showCharacter={true} />
@@ -251,9 +259,31 @@ export default function AssistantPage() {
                     )}
                 </div>
 
+                {/* DISCOVERY SIDEBAR (RIGHT) */}
+                <div className="side-controls">
+                    {HOTSPOTS.map((hs) => (
+                        <IconButton
+                            key={`menu-${hs.id}`}
+                            iconName={"24/Dot"}
+                            label={hs.label}
+                            isProcessing={false}
+                            onClick={() => {/* Navigate logic or just show info */ }}
+                            className="group"
+                            style={{
+                                background: "rgba(8, 18, 8, 0.45)",
+                                borderColor: "rgba(255, 255, 255, 0.15)",
+                                padding: "16px",
+                                minWidth: "60px",
+                                justifyContent: "center"
+                            }}
+                        >
+                            <span className="text-xl group-hover:scale-110 transition-transform">{hs.icon}</span>
+                        </IconButton>
+                    ))}
+                </div>
+
                 {/* BOTTOM CONTROLS */}
                 <div className="bottom-controls">
-                    <div className="text-[10px] tracking-[6px] text-white/30 uppercase font-bold mb-12">Assistant Mode</div>
                     <div className="controls-row">
                         <Link href="/">
                             <IconButton iconName="24/Close" label="Back to Garden" isProcessing={false} />
