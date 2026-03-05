@@ -1,37 +1,32 @@
 import { Message } from "../messages/messages";
 
-const OLLAMA_API = "https://ai.izdrail.com/api/chat";
+const CLOUDFLARE_WORKER_URL = "https://rainwater-ai-worker.stefan.workers.dev"; // Placeholder - update with your actual worker URL
 
 export async function getChatResponse(messages: Message[]) {
-  const res = await fetch(OLLAMA_API, {
+  const res = await fetch(CLOUDFLARE_WORKER_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "gemma3:270m",
       messages: messages.map((m) => ({
         role: m.role,
         content: m.content,
       })),
-      stream: false,
     }),
   });
 
   if (!res.ok) {
-    throw new Error(`Ollama API Error: ${res.status} ${res.statusText}`);
+    throw new Error(`Cloudflare AI Error: ${res.status}`);
   }
 
-  const data = await res.json();
-  const message = data.message?.content || "An error has occurred";
-
-  return { message };
+  const data = await res.json() as any;
+  return { message: data.response || "An error has occurred" };
 }
 
 export async function getChatResponseStream(messages: Message[]) {
-  const res = await fetch(OLLAMA_API, {
+  const res = await fetch(CLOUDFLARE_WORKER_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "gemma3:270m",
       messages: messages.map((m) => ({
         role: m.role,
         content: m.content,
@@ -41,7 +36,7 @@ export async function getChatResponseStream(messages: Message[]) {
   });
 
   if (!res.ok || !res.body) {
-    throw new Error(`Failed to connect to Ollama stream: ${res.status}`);
+    throw new Error(`Failed to connect to Cloudflare AI stream: ${res.status}`);
   }
 
   const reader = res.body.getReader();
@@ -58,41 +53,34 @@ export async function getChatResponseStream(messages: Message[]) {
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
-
-          // Keep the last incomplete line in the buffer
           buffer = lines.pop() || "";
 
           for (const line of lines) {
-            if (!line.trim()) continue;
+            const trimmedLine = line.trim();
+            if (!trimmedLine || !trimmedLine.startsWith("data: ")) continue;
+
+            const jsonStr = trimmedLine.replace("data: ", "");
+            if (jsonStr === "[DONE]") {
+              controller.close();
+              return;
+            }
 
             try {
-              const json = JSON.parse(line);
-              const content = json.message?.content;
+              const json = JSON.parse(jsonStr);
+              const content = json.response;
 
-              // Only enqueue if there's actual content
               if (content) {
                 controller.enqueue(content);
               }
-
-              // Check if this is the final chunk
-              if (json.done) {
-                controller.close();
-                reader.releaseLock();
-                return;
-              }
-            } catch (parseError) {
-              console.error("Failed to parse JSON line:", line, parseError);
+            } catch (e) {
+              console.error("Error parsing Cloudflare stream chunk:", e);
             }
           }
         }
       } catch (err) {
         controller.error(err);
       } finally {
-        try {
-          controller.close();
-        } catch {
-          // Stream already closed
-        }
+        try { controller.close(); } catch { }
         reader.releaseLock();
       }
     },

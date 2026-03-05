@@ -77,7 +77,7 @@ export const Settings = ({
           </div>
           <div className="bg-white/5 rounded-2xl p-24 border border-white/10 backdrop-blur-md">
             <p className="text-white/50 text-sm mb-20 leading-relaxed italic">
-              Define the AI's persona, its knowledge of Al-Rawda, and its conversational style.
+              Define the AI's persona, its knowledge of Our Rainwater, and its conversational style.
             </p>
             <textarea
               value={systemPrompt}

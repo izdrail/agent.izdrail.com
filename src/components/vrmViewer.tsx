@@ -1,13 +1,14 @@
-import { useContext, useCallback } from "react";
+import { useContext, useCallback, useEffect } from "react";
 import { ViewerContext } from "../features/vrmViewer/viewerContext";
 import { buildUrl } from "@/utils/buildUrl";
 
 interface Props {
     onLoaded?: () => void;
     showCharacter?: boolean;
+    showScene?: boolean;
 }
 
-export default function VrmViewer({ onLoaded, showCharacter = true }: Props) {
+export default function VrmViewer({ onLoaded, showCharacter = true, showScene = true }: Props) {
     const { viewer } = useContext(ViewerContext);
 
     const canvasRef = useCallback(
@@ -17,13 +18,16 @@ export default function VrmViewer({ onLoaded, showCharacter = true }: Props) {
                 // You can adjust the scale and position of the character here
                 // We make the character much smaller (e.g. 0.05) to fit inside the model
                 // For position: { x: left/right, y: up/down, z: forward/backward }
-                const vrmPromise = showCharacter
-                    ? viewer.loadVrm(buildUrl("/AvatarSample_A.vrm"), 0.30, { x: 0, y: -0.50, z: 0.50 })
-                    : Promise.resolve();
+                let vrmPromise = Promise.resolve();
+                if (showCharacter) {
+                    vrmPromise = viewer.loadVrm(buildUrl("/AvatarSample_A.vrm"), showScene ? 0.30 : 1.0, showScene ? { x: 0, y: -0.50, z: 0.50 } : { x: 0, y: -1.3, z: 0 });
+                } else {
+                    viewer.unloadVRM();
+                }
 
-                // You can also scale up the room instead of scaling down the character
-                // and move the room so the chair aligns with the character
-                const glbPromise = viewer.loadGlb(buildUrl("/model2.glb"), 1.0, { x: 0, y: 0, z: 0 });
+                const glbPromise = showScene
+                    ? viewer.loadGlb(buildUrl("/model2.glb"), 1.0, { x: 0, y: 0, z: 0 })
+                    : Promise.resolve();
 
                 Promise.all([vrmPromise, glbPromise]).then(() => {
                     onLoaded?.();
@@ -55,8 +59,20 @@ export default function VrmViewer({ onLoaded, showCharacter = true }: Props) {
                 });
             }
         },
-        [viewer, onLoaded]
+        [viewer, onLoaded, showCharacter, showScene]
     );
+
+    // Ensure VRM is unloaded if showCharacter becomes false or component unmounts
+    useEffect(() => {
+        if (!showCharacter) {
+            viewer.unloadVRM();
+        }
+        return () => {
+            if (!showCharacter) {
+                viewer.unloadVRM();
+            }
+        };
+    }, [showCharacter, viewer]);
 
     return (
         <div className={"w-full h-full"}>

@@ -16,7 +16,7 @@ import { Meta } from "@/components/meta";
 import Link from "next/link";
 import { Hotspot, HOTSPOTS } from "@/features/constants/hotspotData";
 
-export default function AssistantPage() {
+export default function AssistantV2Page() {
     const { viewer } = useContext(ViewerContext);
 
     const [systemPrompt, setSystemPrompt] = useState(SYSTEM_PROMPT);
@@ -33,22 +33,9 @@ export default function AssistantPage() {
     const [userMessage, setUserMessage] = useState("");
     const [isMicRecording, setIsMicRecording] = useState(false);
     const [speechRecognition, setSpeechRecognition] = useState<any>(null);
-    const [scale, setScale] = useState(1);
     const sceneRef = useRef<HTMLDivElement>(null);
 
-    // Scaling logic
-    useEffect(() => {
-        const handleResize = () => {
-            const w = window.innerWidth;
-            const h = window.innerHeight;
-            const s = Math.min(w / 1920, h / 1200);
-            setScale(s);
-        };
 
-        handleResize();
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
 
     // Load saved parameters
     useEffect(() => {
@@ -224,19 +211,14 @@ export default function AssistantPage() {
     }, []);
 
     return (
-        <div className="garden-container font-M_PLUS_2 overflow-hidden">
+        <div className="garden-container font-M_PLUS_2 overflow-hidden bg-[#f7f3ed]">
             <Meta />
             <div
                 className="scene"
                 ref={sceneRef}
-                style={{ transform: `scale(${scale})` }}
             >
-                <div className="garden-atmosphere"></div>
-                <div className="depth-blur"></div>
-                <div className="vignette"></div>
-
                 <div className="absolute inset-0 z-10 pointer-events-auto">
-                    <VrmViewer onLoaded={handleLoaded} showCharacter={true} />
+                    <VrmViewer onLoaded={handleLoaded} showCharacter={true} showScene={false} />
                 </div>
 
                 <div className="garden-img-wrap">
@@ -262,29 +244,6 @@ export default function AssistantPage() {
                             {assistantMessage}
                         </div>
                     )}
-                </div>
-
-                {/* DISCOVERY SIDEBAR (RIGHT) */}
-                <div className="side-controls">
-                    {HOTSPOTS.map((hs) => (
-                        <IconButton
-                            key={`menu-${hs.id}`}
-                            iconName={"24/Dot"}
-                            label={hs.label}
-                            isProcessing={false}
-                            onClick={() => {/* Navigate logic */ }}
-                            className="group"
-                            style={{
-                                background: "rgba(8, 18, 8, 0.45)",
-                                borderColor: "rgba(255, 255, 255, 0.15)",
-                                padding: "16px",
-                                minWidth: "60px",
-                                justifyContent: "center"
-                            }}
-                        >
-                            <span className="text-xl group-hover:scale-110 transition-transform">{hs.icon}</span>
-                        </IconButton>
-                    ))}
                 </div>
 
                 {/* BOTTOM CONTROLS */}

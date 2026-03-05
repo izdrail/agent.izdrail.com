@@ -1,7 +1,6 @@
 export interface Hotspot {
     id: string;
-    x: number;
-    y: number;
+    worldPos: { x: number; y: number; z: number };
     icon: string;
     label: string;
     title: string;
@@ -14,11 +13,10 @@ export interface Hotspot {
 export const HOTSPOTS: Hotspot[] = [
     {
         id: "dry-garden",
-        x: 960,
-        y: 650,
+        worldPos: { x: 0, y: 0.8, z: 0 },
         icon: "🏜️",
         label: "Dry Garden",
-        title: "Al-Rawda Arid Zone",
+        title: "Our Rainwater Arid Zone",
         subtitle: "Beauty in Resilience",
         desc: "A stunning xeriscape showcasing desert flora and specialized irrigation techniques, proving that a garden can flourish even in the most challenging conditions.",
         facts: [
@@ -32,8 +30,7 @@ export const HOTSPOTS: Hotspot[] = [
     },
     {
         id: "water-garden",
-        x: 500,
-        y: 800,
+        worldPos: { x: -3, y: 1.0, z: -2 },
         icon: "💧",
         label: "Water Garden",
         title: "The Reflecting Pools",
@@ -50,13 +47,12 @@ export const HOTSPOTS: Hotspot[] = [
     },
     {
         id: "stats",
-        x: 1500,
-        y: 350,
+        worldPos: { x: 3, y: 2.0, z: -4 },
         icon: "📊",
         label: "Statistics",
         title: "Eco Observation Deck",
         subtitle: "Real-time Metrics",
-        desc: "Live data from across the garden, monitoring soil moisture, solar energy harvesting, and the well-being of the Al-Rawda ecosystem.",
+        desc: "Live data from across the garden, monitoring soil moisture, solar energy harvesting, and the well-being of the Our Rainwater ecosystem.",
         facts: [
             { label: "Solar Energy", value: "14.2 kWh/day" },
             { label: "Soil Health", value: "Optimal" },

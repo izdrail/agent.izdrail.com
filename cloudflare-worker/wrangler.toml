@@ -1,0 +1,6 @@
+name = "rainwater-ai-worker"
+main = "src/index.ts"
+compatibility_date = "2023-12-01"
+
+[ai]
+binding = "AI"
