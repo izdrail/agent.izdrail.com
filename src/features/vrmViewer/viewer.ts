@@ -6,7 +6,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { CSS2DRenderer, CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
-
+import Stats from "three/examples/jsm/libs/stats.module";
 /**
  * three.js
  * setup()
@@ -27,6 +27,8 @@ export class Viewer {
   private _gridHelper?: THREE.GridHelper;
   private _axesHelper?: THREE.AxesHelper;
   private _isThrottled = false;
+  private _stats?: any;
+  private _debugDiv?: HTMLDivElement;
 
   // AI State & Aura
   public aiState: "idle" | "thinking" | "speaking" = "idle";
@@ -320,6 +322,36 @@ export class Viewer {
       parentElement.appendChild(this._labelRenderer.domElement);
     }
 
+    if (!this._stats && typeof document !== "undefined") {
+      this._stats = new (Stats as any)();
+      this._stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+      this._stats.dom.style.position = 'absolute';
+      this._stats.dom.style.bottom = '0px'; // move to bottom so it doesn't overlap top UI
+      this._stats.dom.style.top = 'auto';
+      this._stats.dom.style.left = '0px';
+      this._stats.dom.style.zIndex = '100';
+      this._stats.dom.style.display = 'none'; // hidden by default
+
+      // Add a custom debug div
+      this._debugDiv = document.createElement('div');
+      this._debugDiv.style.position = 'absolute';
+      this._debugDiv.style.bottom = '50px';
+      this._debugDiv.style.left = '0px';
+      this._debugDiv.style.color = '#00ff00';
+      this._debugDiv.style.fontFamily = 'monospace';
+      this._debugDiv.style.fontSize = '12px';
+      this._debugDiv.style.background = 'rgba(0,0,0,0.7)';
+      this._debugDiv.style.padding = '8px';
+      this._debugDiv.style.zIndex = '100';
+      this._debugDiv.style.display = 'none'; // hidden by default
+      this._debugDiv.style.pointerEvents = 'none';
+
+      if (parentElement) {
+        parentElement.appendChild(this._stats.dom);
+        parentElement.appendChild(this._debugDiv);
+      }
+    }
+
     this.isReady = true;
 
     // Only start the update loop once
@@ -436,8 +468,14 @@ export class Viewer {
   }
 
   public update = () => {
+    if (this._stats) {
+      this._stats.begin();
+    }
     requestAnimationFrame(this.update);
-    if (this._isThrottled) return; // Save battery when tab is hidden
+    if (this._isThrottled) {
+      if (this._stats) this._stats.end();
+      return; // Save battery when tab is hidden
+    }
 
     const delta = Math.min(this._clock.getDelta(), 0.1); // Cap delta to avoid physics jumps
 
@@ -520,6 +558,23 @@ export class Viewer {
         obj.material.emissiveIntensity = 0.6 + Math.sin(time * 3 + i) * 0.4;
       }
     });
+
+    if (this._debugDiv && this._renderer && this._debugDiv.style.display !== 'none') {
+      const info = this._renderer.info;
+      this._debugDiv.innerHTML = `
+        WebGL Renderer Data:<br/>
+        Draw Calls: ${info.render.calls}<br/>
+        Triangles: ${info.render.triangles}<br/>
+        Points: ${info.render.points}<br/>
+        Lines: ${info.render.lines}<br/>
+        Geometries: ${info.memory.geometries}<br/>
+        Textures: ${info.memory.textures}
+      `;
+    }
+
+    if (this._stats) {
+      this._stats.end();
+    }
   };
 
   public setTransformMode(mode: 'translate' | 'rotate' | 'scale') {
@@ -534,6 +589,9 @@ export class Viewer {
   public toggleTools(visible: boolean) {
     if (this._gridHelper) this._gridHelper.visible = visible;
     if (this._axesHelper) this._axesHelper.visible = visible;
+
+    if (this._stats) this._stats.dom.style.display = visible ? 'block' : 'none';
+    if (this._debugDiv) this._debugDiv.style.display = visible ? 'block' : 'none';
 
     // If turning off tools, hide and disable the gizmo (arrows)
     if (!visible && this._transformControls) {
