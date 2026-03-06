@@ -176,7 +176,7 @@ export default function AssistantV2Page() {
                 }
             }
         },
-        [systemPrompt, chatLog, handleSpeakAi, koeiroParam]
+        [systemPrompt, chatLog, handleSpeakAi, koeiroParam, viewer]
     );
 
     // Speech Recognition Logic

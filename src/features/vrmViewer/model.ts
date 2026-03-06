@@ -34,25 +34,25 @@ export class Model {
       loader.load(
         url,
         (gltf) => resolve(gltf),
-        (progress: THREE.ProgressEvent) => {
+        (progress: any) => {
           if (onProgress && progress.total > 0) {
             onProgress(progress.loaded / progress.total);
           }
         },
-        (error: ErrorEvent) => reject(error)
+        (error: any) => reject(error)
       );
     });
 
     this.scene = gltf.scene;
     this.vrm = gltf.userData.vrm;
 
-    if (this.vrm) {
+    if (this.vrm && this.scene) {
       this.scene.name = "VRMRoot";
       // Cast needed: rotateVRM0 types don't expose VRMCore in this package version
       VRMUtils.rotateVRM0(this.vrm as any);
       this.mixer = new THREE.AnimationMixer(this.scene);
       this.emoteController = new EmoteController(this.vrm, this._lookAtTargetParent);
-    } else {
+    } else if (this.scene) {
       this.scene.name = "GLTFScene";
       this.mixer = new THREE.AnimationMixer(this.scene);
     }

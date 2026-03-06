@@ -65,7 +65,7 @@ export default function Home() {
     if (isLoaded && viewer) {
       viewer.clearClickableSpheres();
       HOTSPOTS.forEach(hs => {
-        viewer.addClickableSphere(hs.id, hs.worldPos, 0x4ab5b0, 0.25);
+        viewer.addClickableSphere(hs.id, hs.worldPos, 0x4ab5b0, 0.02);
       });
       viewer.onWorldInteraction = (id: string) => {
         const hs = HOTSPOTS.find(h => h.id === id);
@@ -279,7 +279,7 @@ export default function Home() {
         {/* DISCOVERY SIDEBAR (RIGHT) */}
         <div className="side-controls">
           <IconButton
-            iconName="24/Edit"
+            iconName="32/Edit"
             label="Toggle Studio Studio"
             isProcessing={false}
             onClick={() => setShowToolbar(!showToolbar)}

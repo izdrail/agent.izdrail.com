@@ -206,7 +206,7 @@ export default function Home() {
         setChatProcessing(false);
       }
     },
-    [systemPrompt, chatLog, handleSpeakAi, openAiKey, koeiroParam]
+    [systemPrompt, chatLog, handleSpeakAi, koeiroParam]
   );
 
   return (

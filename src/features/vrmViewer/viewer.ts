@@ -195,7 +195,7 @@ export class Viewer {
           this._setupHotspots();
           resolve();
         },
-        (progress: THREE.ProgressEvent) => {
+        (progress: any) => {
           if (onProgress && progress.total > 0) {
             onProgress(progress.loaded / progress.total);
           }
@@ -400,7 +400,7 @@ export class Viewer {
     this._clickableObjects = [];
   }
 
-  public addClickableSphere(id: string, position: { x: number, y: number, z: number }, colorHex: number, radius = 0.25) {
+  public addClickableSphere(id: string, position: { x: number, y: number, z: number }, colorHex: number, radius = 0.02) {
     const geometry = new THREE.SphereGeometry(radius, 32, 32);
     const material = new THREE.MeshStandardMaterial({
       color: colorHex,

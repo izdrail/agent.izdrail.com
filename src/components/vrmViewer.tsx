@@ -108,7 +108,7 @@ export default function VrmViewer({ onLoaded, onProgress, showCharacter = true, 
                 });
             }
         },
-        [viewer, onLoaded, showCharacter, showScene]
+        [viewer, onLoaded, onProgress, showCharacter, showScene]
     );
 
     // Ensure VRM is unloaded if showCharacter becomes false or component unmounts
