@@ -1,0 +1,29 @@
+{
+    "name": "Agent - 3D AI Assistant",
+    "short_name": "Agent",
+    "description": "A 3D AI virtual assistant you can talk to in your browser.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0a0f0a",
+    "theme_color": "#4ab5b0",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "productivity",
+        "utilities"
+    ],
+    "screenshots": []
+}

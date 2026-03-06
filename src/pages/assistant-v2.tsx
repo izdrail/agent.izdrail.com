@@ -26,6 +26,8 @@ export default function AssistantV2Page() {
     const [chatProcessing, setChatProcessing] = useState(false);
     const [chatLog, setChatLog] = useState<Message[]>([]);
     const [assistantMessage, setAssistantMessage] = useState("");
+    const [loadingProgress, setLoadingProgress] = useState(0);
+    const [loadingStatus, setLoadingStatus] = useState("Initializing...");
 
     const [isLoaded, setIsLoaded] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
@@ -51,7 +53,7 @@ export default function AssistantV2Page() {
 
     const handleChangeChatLog = useCallback(
         (targetIndex: number, text: string) => {
-            const newChatLog = chatLog.map((v: Message, i) => {
+            const newChatLog = chatLog.map((v: Message, i: number) => {
                 return i === targetIndex ? { role: v.role, content: text } : v;
             });
             setChatLog(newChatLog);
@@ -75,6 +77,7 @@ export default function AssistantV2Page() {
             const newMessage = text;
             if (newMessage == null || newMessage.trim() === "") return;
 
+            if (viewer) viewer.aiState = "thinking";
             setChatProcessing(true);
 
             const messageLog: Message[] = [
@@ -148,7 +151,13 @@ export default function AssistantV2Page() {
 
                         const currentAssistantMessage = sentences.join(" ");
                         handleSpeakAi(aiTalks[0], () => {
+                            if (viewer) {
+                                viewer.aiState = "speaking";
+                                viewer.resetCamera(); // Smooth zoom to face
+                            }
                             setAssistantMessage(currentAssistantMessage);
+                        }, () => {
+                            if (viewer) viewer.aiState = "idle";
                         });
                     }
                 }
@@ -162,6 +171,9 @@ export default function AssistantV2Page() {
                 ];
                 setChatLog(messageLogAssistant);
                 setChatProcessing(false);
+                if (viewer && viewer.aiState === "thinking") {
+                    viewer.aiState = "idle";
+                }
             }
         },
         [systemPrompt, chatLog, handleSpeakAi, koeiroParam]
@@ -210,18 +222,28 @@ export default function AssistantV2Page() {
         setIsLoaded(true);
     }, []);
 
+    const handleLoadingProgress = useCallback((progress: number, status: string) => {
+        setLoadingProgress(progress);
+        setLoadingStatus(status);
+    }, []);
+
     return (
-        <div className="garden-container font-M_PLUS_2 overflow-hidden bg-[#f7f3ed]">
+        <div className="garden-container font-M_PLUS_2 overflow-hidden" style={{ background: 'radial-gradient(circle at center, #fcfaf7 0%, #ede8e0 100%)' }}>
             <Meta />
             <div
                 className="scene"
                 ref={sceneRef}
             >
+                {/* Studio Atmosphere */}
+                <div className="absolute inset-0 opacity-30 pointer-events-none" style={{
+                    background: 'radial-gradient(circle at 50% 30%, rgba(74, 181, 176, 0.1) 0%, transparent 60%)'
+                }}></div>
+
                 <div className="absolute inset-0 z-10 pointer-events-auto">
-                    <VrmViewer onLoaded={handleLoaded} showCharacter={true} showScene={false} />
+                    <VrmViewer onLoaded={handleLoaded} onProgress={handleLoadingProgress} showCharacter={true} showScene={false} />
                 </div>
 
-                <div className="garden-img-wrap">
+                <div className="relative w-full h-full">
                     {!isLoaded && (
                         <div className="loading-screen animate-in fade-in duration-1000">
                             <div className="loading-flower">
@@ -232,7 +254,18 @@ export default function AssistantV2Page() {
                                 <div className="petal-5"></div>
                             </div>
                             <div className="loading-text">Our Rainwater</div>
-                            <div className="loading-status italic">Summoning your Guide...</div>
+                            {/* Progress Display */}
+                            <div className="progress-container">
+                                <div className="progress-bar-bg">
+                                    <div
+                                        className="progress-bar-fill"
+                                        style={{ width: `${loadingProgress}%` }}
+                                    ></div>
+                                </div>
+                                <div className="loading-status">
+                                    {loadingStatus === 'Awakening...' ? 'Awakening...' : `${loadingStatus} (${loadingProgress}%)`}
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>

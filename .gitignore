@@ -40,3 +40,9 @@ next-env.d.ts
 # Large 3D Models
 public/*.glb
 public/*.vrm
+
+# next-pwa generated service worker files
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+public/workbox-*.js.map

@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useState, useRef } from "react";
+import React, { useCallback, useContext, useState, useRef, useEffect } from "react";
 import VrmViewer from "@/components/vrmViewer";
 import { ViewerContext } from "@/features/vrmViewer/viewerContext";
 import { Hotspot, HOTSPOTS } from "@/features/constants/hotspotData";
@@ -10,21 +10,33 @@ import { Menu } from "@/components/menu";
 export default function Home() {
   const { viewer } = useContext(ViewerContext);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingStatus, setLoadingStatus] = useState("Initializing...");
   const [activeHotspot, setActiveHotspot] = useState<Hotspot | null>(null);
   const [toolsEnabled, setToolsEnabled] = useState(false);
+  const [showToolbar, setShowToolbar] = useState(false);
   const [activeMode, setActiveMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
   const sceneRef = useRef<HTMLDivElement>(null);
+
+  // Keyboard shortcut to toggle the tools UI (T)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'KeyT' && !(e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement)) {
+        setShowToolbar((prev: boolean) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleLoaded = useCallback(() => {
     setIsLoaded(true);
   }, []);
 
-  // Ensure tools are hidden by default once the viewer is ready
-  useEffect(() => {
-    if (viewer?.isReady) {
-      viewer.toggleTools(false);
-    }
-  }, [viewer, viewer?.isReady]);
+  const handleLoadingProgress = useCallback((progress: number, status: string) => {
+    setLoadingProgress(progress);
+    setLoadingStatus(status);
+  }, []);
 
   const handleToggleTools = useCallback(() => {
     const next = !toolsEnabled;
@@ -36,6 +48,31 @@ export default function Home() {
     setActiveMode(mode);
     viewer?.setTransformMode(mode);
   }, [viewer]);
+
+  useEffect(() => {
+    if (!viewer) return;
+    if (activeHotspot) {
+      viewer.focusOn(
+        { x: activeHotspot.worldPos.x - 2, y: activeHotspot.worldPos.y + 1, z: activeHotspot.worldPos.z + 2 },
+        activeHotspot.worldPos
+      );
+    } else {
+      viewer.resetFocus();
+    }
+  }, [activeHotspot, viewer]);
+
+  useEffect(() => {
+    if (isLoaded && viewer) {
+      viewer.clearClickableSpheres();
+      HOTSPOTS.forEach(hs => {
+        viewer.addClickableSphere(hs.id, hs.worldPos, 0x4ab5b0, 0.25);
+      });
+      viewer.onWorldInteraction = (id: string) => {
+        const hs = HOTSPOTS.find(h => h.id === id);
+        if (hs) setActiveHotspot(hs);
+      };
+    }
+  }, [isLoaded, viewer]);
 
   return (
     <div className="garden-container font-M_PLUS_2">
@@ -57,111 +94,131 @@ export default function Home() {
               <div className="petal-5"></div>
             </div>
             <div className="loading-text">Our Rainwater</div>
-            <div className="loading-status italic">Preparing the Sanctuary...</div>
+
+            {/* Progress Display */}
+            <div className="progress-container">
+              <div className="progress-bar-bg">
+                <div
+                  className="progress-bar-fill"
+                  style={{ width: `${loadingProgress}%` }}
+                ></div>
+              </div>
+              <div className="loading-status">
+                {loadingStatus === 'Awakening...' ? 'Awakening...' : `${loadingStatus} (${loadingProgress}%)`}
+              </div>
+            </div>
           </div>
         )}
         <div className="absolute inset-0 z-10 pointer-events-auto">
-          <VrmViewer onLoaded={handleLoaded} showCharacter={false} />
+          <VrmViewer onLoaded={handleLoaded} onProgress={handleLoadingProgress} showCharacter={false} />
         </div>
 
         {/* BLENDER TOOLS — vertical toolbar, top-left */}
-        <div style={{
-          position: 'absolute',
-          top: '16px',
-          left: '16px',
-          zIndex: 50,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '4px',
-          background: 'rgba(10, 10, 12, 0.72)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '14px',
-          padding: '8px 6px',
-          backdropFilter: 'blur(16px)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-          pointerEvents: 'auto',
-        }}>
-          {/* Header label */}
+        {showToolbar && (
           <div style={{
-            fontSize: '9px',
-            fontWeight: 700,
-            letterSpacing: '0.12em',
-            color: 'rgba(255,255,255,0.3)',
-            textTransform: 'uppercase',
-            marginBottom: '4px',
-            userSelect: 'none',
-          }}>
-            3D
+            position: 'absolute',
+            top: '24px',
+            left: '24px',
+            zIndex: 50,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'rgba(10, 15, 12, 0.65)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '20px',
+            padding: '12px 10px',
+            backdropFilter: 'blur(32px) saturate(1.8)',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.05) inset',
+            pointerEvents: 'auto',
+          }} className="animate-in slide-in-from-left-6 duration-500">
+            {/* Header label */}
+            <div style={{
+              fontSize: '10px',
+              fontFamily: "'Outfit', sans-serif",
+              fontWeight: 700,
+              letterSpacing: '0.15em',
+              color: 'rgba(255,255,255,0.35)',
+              textTransform: 'uppercase',
+              marginBottom: '6px',
+              userSelect: 'none',
+            }}>
+              Studio
+            </div>
+
+            {/* Power / Enable toggle */}
+            <button
+              onClick={handleToggleTools}
+              title={toolsEnabled ? 'Disable Helpers' : 'Enable Studio Helpers'}
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '14px',
+                border: `1.5px solid ${toolsEnabled ? 'rgba(74,181,176,1)' : 'rgba(255,255,255,0.15)'}`,
+                background: toolsEnabled ? 'rgba(74,181,176,0.15)' : 'rgba(255,255,255,0.03)',
+                color: toolsEnabled ? '#4ab5b0' : 'rgba(255,255,255,0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                fontSize: '20px',
+                boxShadow: toolsEnabled ? '0 0 20px rgba(74,181,176,0.25)' : 'none',
+              }}
+            >
+              ⏻
+            </button>
+
+            {/* Divider */}
+            <div style={{
+              width: '32px',
+              height: '1px',
+              background: 'rgba(255,255,255,0.08)',
+              margin: '6px 0',
+            }} />
+
+            {/* Tool buttons */}
+            {([
+              { mode: 'translate', icon: '↔', label: 'Move', key: 'G' },
+              { mode: 'rotate', icon: '↻', label: 'Rotate', key: 'R' },
+              { mode: 'scale', icon: '⤢', label: 'Scale', key: 'S' },
+            ] as const).map(({ mode, icon, label, key }) => {
+              const isActive = toolsEnabled && activeMode === mode;
+              return (
+                <button
+                  key={mode}
+                  onClick={() => toolsEnabled && handleSetMode(mode)}
+                  title={`${label} (${key})`}
+                  style={{
+                    width: '44px',
+                    height: '48px',
+                    borderRadius: '12px',
+                    border: `1px solid ${isActive ? 'rgba(74,181,176,0.8)' : 'rgba(255,255,255,0.06)'}`,
+                    background: isActive ? 'rgba(74,181,176,0.12)' : 'rgba(255,255,255,0.02)',
+                    color: isActive ? '#4ab5b0' : toolsEnabled ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.2)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    cursor: toolsEnabled ? 'pointer' : 'not-allowed',
+                    transition: 'all 0.2s ease',
+                    boxShadow: isActive ? '0 0 12px rgba(74,181,176,0.15)' : 'none',
+                  }}
+                >
+                  <span style={{ fontSize: '18px', lineHeight: 1 }}>{icon}</span>
+                  <span style={{
+                    fontSize: '9px',
+                    fontFamily: "'Outfit', sans-serif",
+                    fontWeight: 700,
+                    letterSpacing: '0.05em',
+                    opacity: isActive ? 1 : 0.5
+                  }}>{key}</span>
+                </button>
+              );
+            })}
           </div>
-
-          {/* Power / Enable toggle */}
-          <button
-            onClick={handleToggleTools}
-            title={toolsEnabled ? 'Disable 3D Tools' : 'Enable 3D Tools'}
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              border: `1px solid ${toolsEnabled ? 'rgba(74,181,176,0.8)' : 'rgba(255,255,255,0.12)'}`,
-              background: toolsEnabled ? 'rgba(74,181,176,0.25)' : 'rgba(255,255,255,0.05)',
-              color: toolsEnabled ? '#4ab5b0' : 'rgba(255,255,255,0.45)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              fontSize: '18px',
-              boxShadow: toolsEnabled ? '0 0 12px rgba(74,181,176,0.3)' : 'none',
-            }}
-          >
-            ⏻
-          </button>
-
-          {/* Divider */}
-          <div style={{
-            width: '28px',
-            height: '1px',
-            background: 'rgba(255,255,255,0.08)',
-            margin: '4px 0',
-          }} />
-
-          {/* Tool buttons */}
-          {([
-            { mode: 'translate', icon: '↔', label: 'Move', key: 'G' },
-            { mode: 'rotate', icon: '↻', label: 'Rotate', key: 'R' },
-            { mode: 'scale', icon: '⤢', label: 'Scale', key: 'S' },
-          ] as const).map(({ mode, icon, label, key }) => {
-            const isActive = toolsEnabled && activeMode === mode;
-            return (
-              <button
-                key={mode}
-                onClick={() => toolsEnabled && handleSetMode(mode)}
-                title={`${label} (${key})`}
-                style={{
-                  width: '40px',
-                  height: '44px',
-                  borderRadius: '10px',
-                  border: `1px solid ${isActive ? 'rgba(74,181,176,0.7)' : 'rgba(255,255,255,0.08)'}`,
-                  background: isActive ? 'rgba(74,181,176,0.2)' : 'rgba(255,255,255,0.04)',
-                  color: isActive ? '#4ab5b0' : toolsEnabled ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.22)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '2px',
-                  cursor: toolsEnabled ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.2s ease',
-                  boxShadow: isActive ? '0 0 10px rgba(74,181,176,0.2)' : 'none',
-                  fontSize: '14px',
-                }}
-              >
-                <span style={{ fontSize: '16px', lineHeight: 1 }}>{icon}</span>
-                <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.05em', opacity: 0.7 }}>{key}</span>
-              </button>
-            );
-          })}
-        </div>
+        )}
 
         {/* TOOLTIP CARD (POP-UP ABOVE MENU) */}
         {activeHotspot && (
@@ -186,7 +243,7 @@ export default function Home() {
               <div className="tip-divider"></div>
               <div className="tip-desc">{activeHotspot.desc}</div>
               <div className="tip-facts">
-                {activeHotspot.facts.map((f, i) => (
+                {activeHotspot.facts.map((f: { label: string, value: string }, i: number) => (
                   <div key={i} className="tip-fact">
                     <div className="tip-fact-label">{f.label}</div>
                     <div className="tip-fact-value">{f.value}</div>
@@ -194,7 +251,7 @@ export default function Home() {
                 ))}
               </div>
               <div className="tip-tags">
-                {activeHotspot.tags.map((t, i) => (
+                {activeHotspot.tags.map((t: { text: string, color: string }, i: number) => (
                   <div
                     key={i}
                     className="tip-tag"
@@ -221,6 +278,24 @@ export default function Home() {
 
         {/* DISCOVERY SIDEBAR (RIGHT) */}
         <div className="side-controls">
+          <IconButton
+            iconName="24/Edit"
+            label="Toggle Studio Studio"
+            isProcessing={false}
+            onClick={() => setShowToolbar(!showToolbar)}
+            style={{
+              background: showToolbar ? "rgba(74, 181, 176, 0.18)" : "rgba(8, 18, 8, 0.45)",
+              borderColor: showToolbar ? "rgba(74, 181, 176, 0.9)" : "rgba(255, 255, 255, 0.12)",
+              backdropFilter: "blur(24px)",
+              padding: "18px",
+              marginBottom: "16px",
+              borderRadius: "18px",
+              boxShadow: showToolbar ? "0 0 24px rgba(74, 181, 176, 0.15)" : "0 8px 32px rgba(0,0,0,0.2)",
+            }}
+          >
+            <span className="text-xl transition-transform hover:rotate-12 duration-300">🛠️</span>
+          </IconButton>
+          <div style={{ width: '32px', height: '1px', background: 'rgba(255,255,255,0.12)', margin: '0 auto 16px' }}></div>
           {HOTSPOTS.map((hs) => (
             <IconButton
               key={`menu-${hs.id}`}

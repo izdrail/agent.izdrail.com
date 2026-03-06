@@ -21,7 +21,7 @@ export class Model {
     this._lipSync = new LipSync(new AudioContext());
   }
 
-  public async loadVRM(url: string): Promise<void> {
+  public async loadVRM(url: string, onProgress?: (progress: number) => void): Promise<void> {
     const loader = new GLTFLoader();
     loader.register(
       (parser) =>
@@ -30,7 +30,18 @@ export class Model {
         })
     );
 
-    const gltf = await loader.loadAsync(url);
+    const gltf = await new Promise<any>((resolve, reject) => {
+      loader.load(
+        url,
+        (gltf) => resolve(gltf),
+        (progress: THREE.ProgressEvent) => {
+          if (onProgress && progress.total > 0) {
+            onProgress(progress.loaded / progress.total);
+          }
+        },
+        (error: ErrorEvent) => reject(error)
+      );
+    });
 
     this.scene = gltf.scene;
     this.vrm = gltf.userData.vrm;

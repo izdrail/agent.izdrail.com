@@ -26,12 +26,29 @@ export class Viewer {
   private _transformControls?: TransformControls;
   private _gridHelper?: THREE.GridHelper;
   private _axesHelper?: THREE.AxesHelper;
+  private _isThrottled = false;
+
+  // AI State & Aura
+  public aiState: "idle" | "thinking" | "speaking" = "idle";
+
+  // Camera Interpolation
+  private _targetCamPos = new THREE.Vector3(-2.25, 1.0, 2.75);
+  private _targetCamLookAt = new THREE.Vector3(0, 0, 0);
+  private _camLerpSpeed = 3.0;
+
+  // Vector pooling to avoid GC pressure
+  private _tempMoveVector = new THREE.Vector3();
+  private _tempForward = new THREE.Vector3();
+  private _tempRight = new THREE.Vector3();
+  private _tempDirection = new THREE.Vector3();
+  private _tempHeadPos = new THREE.Vector3();
 
   public onWorldInteraction?: (id: string) => void;
   private _raycaster: THREE.Raycaster;
   private _mouse: THREE.Vector2;
   private _clickableObjects: THREE.Mesh[] = [];
   private _glbLoadId: number = 0;
+  private _isUserInteracting = false;
 
   constructor() {
     this.isReady = false;
@@ -50,18 +67,20 @@ export class Viewer {
     }
 
     // light
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
-    directionalLight.position.set(1.0, 1.0, 1.0).normalize();
+    const directionalLight = new THREE.DirectionalLight(0xfff7e6, 0.7); // Warm sunlight
+    directionalLight.position.set(2.0, 5.0, 3.0).normalize();
     scene.add(directionalLight);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    const ambientLight = new THREE.AmbientLight(0xe6f0ff, 0.5); // Soft blue ethereal ambient
     scene.add(ambientLight);
 
-    // 3D Environment Helpers (Grid, Axes, Fog)
+    // 3D Environment Helpers (Grid, Axes) — hidden until user enables tools
     this._gridHelper = new THREE.GridHelper(100, 100, 0x888888, 0x444444);
+    this._gridHelper.visible = false;
     scene.add(this._gridHelper);
 
     this._axesHelper = new THREE.AxesHelper(10);
+    this._axesHelper.visible = false;
     scene.add(this._axesHelper);
 
     // animate
@@ -80,13 +99,16 @@ export class Viewer {
       });
       window.addEventListener("keyup", (e) => (this._keys[e.code] = false));
       window.addEventListener("pointerdown", this._onPointerDown.bind(this));
+      document.addEventListener("visibilitychange", () => {
+        this._isThrottled = document.visibilityState === "hidden";
+      });
     }
 
     this._raycaster = new THREE.Raycaster();
     this._mouse = new THREE.Vector2();
   }
 
-  public loadVrm(url: string, scale: number = 1.0, position: { x: number, y: number, z: number } = { x: 0, y: 0, z: 0 }): Promise<void> {
+  public loadVrm(url: string, scale: number = 1.0, position: { x: number, y: number, z: number } = { x: 0, y: 0, z: 0 }, onProgress?: (progress: number) => void): Promise<void> {
     if (this.model?.scene) {
       this.unloadVRM();
     }
@@ -94,7 +116,7 @@ export class Viewer {
     // gltf and vrm
     const newModel = new Model(this._camera || new THREE.Object3D());
     this.model = newModel;
-    return newModel.loadVRM(url).then(async () => {
+    return newModel.loadVRM(url, onProgress).then(async () => {
       // Unloaded explicitly or superseded by another load while loading
       if (this.model !== newModel) {
         newModel.unLoadVrm();
@@ -102,9 +124,12 @@ export class Viewer {
       }
       if (!this.model?.scene) return;
 
-      // Disable frustum culling
+      // Performance: Only disable frustum culling for SkinnedMesh to avoid pop-outs,
+      // but keep it for everything else.
       this.model.scene.traverse((obj) => {
-        obj.frustumCulled = false;
+        if ((obj as THREE.SkinnedMesh).isSkinnedMesh) {
+          obj.frustumCulled = false;
+        }
       });
 
       // Apply scaling and positioning to the character
@@ -125,12 +150,14 @@ export class Viewer {
     });
   }
 
-  public loadGlb(url: string, scale: number = 1.0, position: { x: number, y: number, z: number } = { x: 0, y: 0, z: 0 }): Promise<void> {
+
+  public loadGlb(url: string, scale: number = 1.0, position: { x: number, y: number, z: number } = { x: 0, y: 0, z: 0 }, onProgress?: (progress: number) => void): Promise<void> {
     this._glbLoadId++;
     const currentLoadId = this._glbLoadId;
 
     // Remove any previously loaded GLB
     if (this._glbScene) {
+      if (this._transformControls) this._transformControls.detach();
       this._scene.remove(this._glbScene);
       this._glbScene = undefined;
     }
@@ -153,6 +180,11 @@ export class Viewer {
           this._glbScene.scale.set(scale, scale, scale);
           this._glbScene.position.set(position.x, position.y, position.z);
 
+          // Ensure frustum culling is enabled for performance
+          this._glbScene.traverse((obj: THREE.Object3D) => {
+            obj.frustumCulled = true;
+          });
+
           this._scene.add(this._glbScene);
 
           if (this._transformControls) {
@@ -160,9 +192,14 @@ export class Viewer {
           }
 
           console.log("GLB model loaded:", url);
+          this._setupHotspots();
           resolve();
         },
-        undefined,
+        (progress: THREE.ProgressEvent) => {
+          if (onProgress && progress.total > 0) {
+            onProgress(progress.loaded / progress.total);
+          }
+        },
         (error) => {
           console.error("Error loading GLB model:", error);
           reject(error);
@@ -171,8 +208,25 @@ export class Viewer {
     });
   }
 
+  private _setupHotspots() {
+    this.clearClickableSpheres();
+    // Re-initialize 3D spheres based on current scene/data if needed
+    // For now, index.tsx handles the actual calls to addClickableSphere
+  }
+
+  public focusOn(position: { x: number, y: number, z: number }, target: { x: number, y: number, z: number }) {
+    this._targetCamPos.set(position.x, position.y, position.z);
+    this._targetCamLookAt.set(target.x, target.y, target.z);
+  }
+
+  public resetFocus() {
+    this._targetCamPos.set(-2.25, 1.0, 2.75);
+    this._targetCamLookAt.set(0, 0, 0);
+  }
+
   public unloadVRM(): void {
     if (this.model?.scene) {
+      if (this._transformControls) this._transformControls.detach();
       this._scene.remove(this.model.scene);
       this.model?.unLoadVrm();
     }
@@ -185,17 +239,32 @@ export class Viewer {
     const parentElement = canvas.parentElement;
     const width = parentElement?.clientWidth || canvas.width;
     const height = parentElement?.clientHeight || canvas.height;
+
+    // Clean up old renderer and controls before re-setup
+    if (this._renderer) {
+      this._renderer.dispose();
+    }
+    if (this._transformControls) {
+      this._transformControls.detach();
+      this._scene.remove(this._transformControls);
+      this._transformControls.dispose();
+    }
+    if (this._cameraControls) {
+      this._cameraControls.dispose();
+    }
+
+    const pixelRatio = Math.min(window.devicePixelRatio, 2);
     // Optimized renderer for large models and high-res tablets
     this._renderer = new THREE.WebGLRenderer({
       canvas: canvas,
       alpha: true,
-      antialias: true,
+      antialias: pixelRatio < 1.5, // Disable antialiasing on high-DPI screens for performance
       powerPreference: "high-performance",
       precision: "mediump"
     });
     this._renderer.outputEncoding = THREE.sRGBEncoding;
     this._renderer.setSize(width, height);
-    this._renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap at 2 for performance on high-DPI tablets
+    this._renderer.setPixelRatio(pixelRatio);
 
     // camera
     this._camera = new THREE.PerspectiveCamera(25.0, width / height, 0.1, 1000.0);
@@ -208,6 +277,23 @@ export class Viewer {
     );
     this._cameraControls.target.set(0, 0, 0);
     this._cameraControls.screenSpacePanning = true;
+    this._cameraControls.enableDamping = true;
+    this._cameraControls.dampingFactor = 0.05;
+
+    // Sync targets when user interacts so we don't snap back
+    this._cameraControls.addEventListener('start', () => {
+      this._isUserInteracting = true;
+    });
+    this._cameraControls.addEventListener('end', () => {
+      this._isUserInteracting = false;
+    });
+    this._cameraControls.addEventListener('change', () => {
+      if (this._isUserInteracting && this._camera && this._cameraControls) {
+        this._targetCamPos.copy(this._camera.position);
+        this._targetCamLookAt.copy(this._cameraControls.target);
+      }
+    });
+
     this._cameraControls.update();
 
     // TransformControls (Blender-like gizmo)
@@ -218,6 +304,10 @@ export class Viewer {
         this._cameraControls.enabled = !event.value;
       }
     });
+    // Start hidden & disabled — user must toggle them on via the UI
+    this._transformControls.visible = false;
+    this._transformControls.enabled = false;
+    this._transformControls.detach();
     this._scene.add(this._transformControls);
 
     window.addEventListener("resize", () => {
@@ -231,8 +321,15 @@ export class Viewer {
     }
 
     this.isReady = true;
-    this.update();
+
+    // Only start the update loop once
+    if (!this._updateStarted) {
+      this._updateStarted = true;
+      this.update();
+    }
   }
+
+  private _updateStarted = false;
 
   /**
    * canvas
@@ -267,14 +364,18 @@ export class Viewer {
     const headNode = vrm?.humanoid?.getNormalizedBoneNode("head");
 
     if (headNode) {
-      const headWPos = headNode.getWorldPosition(new THREE.Vector3());
-      this._camera?.position.set(
-        this._camera.position.x,
-        headWPos.y,
-        this._camera.position.z
+      this._tempHeadPos.set(0, 0, 0);
+      headNode.getWorldPosition(this._tempHeadPos);
+
+      // Update targets for smooth lerp
+      this._targetCamPos.set(
+        this._camera?.position.x || -2.25,
+        this._tempHeadPos.y,
+        this._camera?.position.z || 2.75
       );
-      this._cameraControls?.target.set(headWPos.x, headWPos.y, headWPos.z);
-      this._cameraControls?.update();
+      this._targetCamLookAt.copy(this._tempHeadPos);
+    } else {
+      this.resetFocus();
     }
   }
 
@@ -336,40 +437,47 @@ export class Viewer {
 
   public update = () => {
     requestAnimationFrame(this.update);
-    const delta = this._clock.getDelta();
+    if (this._isThrottled) return; // Save battery when tab is hidden
+
+    const delta = Math.min(this._clock.getDelta(), 0.1); // Cap delta to avoid physics jumps
+
+    // Safety: Detach TransformControls if the object is no longer in the scene
+    if (this._transformControls && this._transformControls.object) {
+      if (!this._transformControls.object.parent) {
+        this._transformControls.detach();
+      }
+    }
 
     // update movement
     if (this.model?.scene && this._camera) {
       const moveSpeed = 2.0; // Units per second
-      const moveVector = new THREE.Vector3(0, 0, 0);
+      this._tempMoveVector.set(0, 0, 0);
 
-      if (this._keys["KeyW"]) moveVector.z -= 1;
-      if (this._keys["KeyS"]) moveVector.z += 1;
-      if (this._keys["KeyA"]) moveVector.x -= 1;
-      if (this._keys["KeyD"]) moveVector.x += 1;
+      if (this._keys["KeyW"]) this._tempMoveVector.z -= 1;
+      if (this._keys["KeyS"]) this._tempMoveVector.z += 1;
+      if (this._keys["KeyA"]) this._tempMoveVector.x -= 1;
+      if (this._keys["KeyD"]) this._tempMoveVector.x += 1;
 
-      if (moveVector.lengthSq() > 0) {
-        moveVector.normalize();
+      if (this._tempMoveVector.lengthSq() > 0) {
+        this._tempMoveVector.normalize();
 
         // Get camera forward direction (projected on XZ plane)
-        const forward = new THREE.Vector3();
-        this._camera.getWorldDirection(forward);
-        forward.y = 0;
-        forward.normalize();
+        this._camera.getWorldDirection(this._tempForward);
+        this._tempForward.y = 0;
+        this._tempForward.normalize();
 
-        const right = new THREE.Vector3();
-        right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+        this._tempRight.crossVectors(this._tempForward, new THREE.Vector3(0, 1, 0)).normalize();
 
         // Calculate final move direction
-        const direction = new THREE.Vector3();
-        direction.addScaledVector(forward, -moveVector.z);
-        direction.addScaledVector(right, moveVector.x);
+        this._tempDirection.set(0, 0, 0);
+        this._tempDirection.addScaledVector(this._tempForward, -this._tempMoveVector.z);
+        this._tempDirection.addScaledVector(this._tempRight, this._tempMoveVector.x);
 
         // Update character position
-        this.model.scene.position.addScaledVector(direction, moveSpeed * delta);
+        this.model.scene.position.addScaledVector(this._tempDirection, moveSpeed * delta);
 
         // Rotate character to face movement direction
-        const targetRotation = Math.atan2(direction.x, direction.z);
+        const targetRotation = Math.atan2(this._tempDirection.x, this._tempDirection.z);
         this.model.scene.rotation.y = targetRotation;
 
         // Update camera target to follow character
@@ -397,20 +505,40 @@ export class Viewer {
     if (this._labelRenderer && this._camera) {
       this._labelRenderer.render(this._scene, this._camera);
     }
+
+    // Smooth Camera lerp
+    if (this._camera && this._cameraControls && !this._isUserInteracting) {
+      this._camera.position.lerp(this._targetCamPos, delta * this._camLerpSpeed);
+      this._cameraControls.target.lerp(this._targetCamLookAt, delta * this._camLerpSpeed);
+    }
+
+    // Hotspot Pulse (Elite transition)
+    this._clickableObjects.forEach((obj, i) => {
+      const time = this._clock.elapsedTime;
+      obj.scale.setScalar(1 + Math.sin(time * 2 + i) * 0.05);
+      if (obj.material instanceof THREE.MeshStandardMaterial) {
+        obj.material.emissiveIntensity = 0.6 + Math.sin(time * 3 + i) * 0.4;
+      }
+    });
   };
 
   public setTransformMode(mode: 'translate' | 'rotate' | 'scale') {
     if (this._transformControls) {
       this._transformControls.setMode(mode);
+      // Only show the arrows if we are actually in a transform mode
+      this._transformControls.visible = true;
+      this._transformControls.enabled = true;
     }
   }
 
   public toggleTools(visible: boolean) {
     if (this._gridHelper) this._gridHelper.visible = visible;
     if (this._axesHelper) this._axesHelper.visible = visible;
-    if (this._transformControls) {
-      this._transformControls.visible = visible;
-      this._transformControls.enabled = visible;
+
+    // If turning off tools, hide and disable the gizmo (arrows)
+    if (!visible && this._transformControls) {
+      this._transformControls.visible = false;
+      this._transformControls.enabled = false;
     }
   }
 }

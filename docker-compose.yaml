@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         WWWUSER: '${WWWUSER:-1000}'
-        WWWGROUP: '${WWWGROUP:-1001}'
+        WWWGROUP: '${WWWGROUP:-1000}'
     image: izdrail/agent.izdrail.com
     container_name: agent.izdrail.com
     extra_hosts:
@@ -14,8 +14,6 @@ services:
       - '3000:3000'
     volumes:
       - '.:/app'
-      - '/app/node_modules'
-      - '/app/.next'
     networks:
       - sail
 networks:

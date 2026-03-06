@@ -25,6 +25,8 @@ export default function Home() {
   const [chatProcessing, setChatProcessing] = useState(false);
   const [chatLog, setChatLog] = useState<Message[]>([]);
   const [assistantMessage, setAssistantMessage] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+  const [showChatLog, setShowChatLog] = useState(false);
 
   // Load saved parameters from local storage
   useEffect(() => {
@@ -40,14 +42,14 @@ export default function Home() {
 
 
 
-useEffect(() => {
-  // const introText = "Hello! Welcome to the VRM experience. How can I assist you today?";
-  // const screenplay = textsToScreenplay([introText], koeiroParam);
-  
-  // handleSpeakAi(screenplay[0], () => {
-  //   console.log("Intro speech started");
-  // });
-}, []);
+  useEffect(() => {
+    // const introText = "Hello! Welcome to the VRM experience. How can I assist you today?";
+    // const screenplay = textsToScreenplay([introText], koeiroParam);
+
+    // handleSpeakAi(screenplay[0], () => {
+    //   console.log("Intro speech started");
+    // });
+  }, []);
 
 
   // Save parameters to local storage whenever they change
@@ -66,7 +68,7 @@ useEffect(() => {
       const newChatLog = chatLog.map((v: Message, i) => {
         return i === targetIndex ? { role: v.role, content: text } : v;
       });
-      
+
       setChatLog(newChatLog);
     },
     [chatLog]
@@ -94,9 +96,9 @@ useEffect(() => {
       // Check if the input text is valid
       const newMessage = text;
       if (newMessage == null) return;
-      
+
       setChatProcessing(true);
-      
+
       // Add the user's message to the chat log and display it
       const messageLog: Message[] = [
         ...chatLog,
@@ -114,13 +116,13 @@ useEffect(() => {
       ];
 
       // Get the response stream from Chat GPT
-      const stream = await getChatResponseStream(messages, openAiKey).catch(
+      const stream = await getChatResponseStream(messages).catch(
         (e) => {
           console.error(e);
           return null;
         }
       );
-      
+
       if (stream == null) {
         setChatProcessing(false);
         return;
@@ -131,15 +133,15 @@ useEffect(() => {
       let aiTextLog = "";
       let tag = "";
       const sentences = new Array<string>();
-      
+
       try {
         while (true) {
           const { done, value } = await reader.read();
-          
+
           if (done) break;
-          
+
           receivedMessage += value;
-          
+
           // Update the display with the current received message
           setAssistantMessage(receivedMessage);
 
@@ -154,14 +156,14 @@ useEffect(() => {
           const sentenceMatch = receivedMessage.match(
             /^(.+[。．！？\n]|.{10,}[、,])/
           );
-          
+
           if (sentenceMatch && sentenceMatch[0]) {
             const sentence = sentenceMatch[0];
             sentences.push(sentence);
             receivedMessage = receivedMessage
               .slice(sentence.length)
               .trimStart();
-            
+
             // Skip unpronounceable or unnecessary strings
             if (
               !sentence.replace(
@@ -171,14 +173,14 @@ useEffect(() => {
             ) {
               continue;
             }
-            
+
             const aiText = `${tag} ${sentence}`;
             const aiTalks = textsToScreenplay([aiText], koeiroParam);
-            
+
             console.log("Processing sentence:", aiText);
-            
+
             aiTextLog += aiText;
-            
+
 
             console.log("AI Text Log:", aiTalks);
 
@@ -193,13 +195,13 @@ useEffect(() => {
         console.error("Error processing chat response:", e);
       } finally {
         reader.releaseLock();
-        
+
         // Add the complete assistant's response to the chat log
         const messageLogAssistant: Message[] = [
           ...messageLog,
           { role: "assistant", content: aiTextLog },
         ];
-        
+
         setChatLog(messageLogAssistant);
         setChatProcessing(false);
       }
@@ -229,6 +231,10 @@ useEffect(() => {
         handleClickResetChatLog={() => setChatLog([])}
         handleClickResetSystemPrompt={() => setSystemPrompt(SYSTEM_PROMPT)}
         onChangeKoeiromapKey={setKoeiromapKey}
+        showSettings={showSettings}
+        setShowSettings={setShowSettings}
+        showChatLog={showChatLog}
+        setShowChatLog={setShowChatLog}
       />
       <GitHubLink />
     </div>

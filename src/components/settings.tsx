@@ -77,7 +77,7 @@ export const Settings = ({
           </div>
           <div className="bg-white/5 rounded-2xl p-24 border border-white/10 backdrop-blur-md">
             <p className="text-white/50 text-sm mb-20 leading-relaxed italic">
-              Define the AI's persona, its knowledge of Our Rainwater, and its conversational style.
+              Define the AI&apos;s persona, its knowledge of Our Rainwater, and its conversational style.
             </p>
             <textarea
               value={systemPrompt}
@@ -148,7 +148,7 @@ export const Settings = ({
             </div>
             <div className="bg-white/5 rounded-2xl p-24 border border-white/10 backdrop-blur-md">
               <p className="text-white/50 text-sm mb-24 leading-relaxed italic">
-                Review and edit the current session memory. Clearing this will reset the guide's context.
+                Review and edit the current session memory. Clearing this will reset the guide&apos;s context.
               </p>
 
               <div className="space-y-12 max-h-96 overflow-y-auto pr-8 custom-scrollbar mb-24">
