@@ -11,11 +11,31 @@ export default function Home() {
   const { viewer } = useContext(ViewerContext);
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeHotspot, setActiveHotspot] = useState<Hotspot | null>(null);
+  const [toolsEnabled, setToolsEnabled] = useState(false);
+  const [activeMode, setActiveMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
   const sceneRef = useRef<HTMLDivElement>(null);
 
   const handleLoaded = useCallback(() => {
     setIsLoaded(true);
   }, []);
+
+  // Ensure tools are hidden by default once the viewer is ready
+  useEffect(() => {
+    if (viewer?.isReady) {
+      viewer.toggleTools(false);
+    }
+  }, [viewer, viewer?.isReady]);
+
+  const handleToggleTools = useCallback(() => {
+    const next = !toolsEnabled;
+    setToolsEnabled(next);
+    viewer?.toggleTools(next);
+  }, [toolsEnabled, viewer]);
+
+  const handleSetMode = useCallback((mode: 'translate' | 'rotate' | 'scale') => {
+    setActiveMode(mode);
+    viewer?.setTransformMode(mode);
+  }, [viewer]);
 
   return (
     <div className="garden-container font-M_PLUS_2">
@@ -42,6 +62,105 @@ export default function Home() {
         )}
         <div className="absolute inset-0 z-10 pointer-events-auto">
           <VrmViewer onLoaded={handleLoaded} showCharacter={false} />
+        </div>
+
+        {/* BLENDER TOOLS — vertical toolbar, top-left */}
+        <div style={{
+          position: 'absolute',
+          top: '16px',
+          left: '16px',
+          zIndex: 50,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '4px',
+          background: 'rgba(10, 10, 12, 0.72)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '14px',
+          padding: '8px 6px',
+          backdropFilter: 'blur(16px)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          pointerEvents: 'auto',
+        }}>
+          {/* Header label */}
+          <div style={{
+            fontSize: '9px',
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            color: 'rgba(255,255,255,0.3)',
+            textTransform: 'uppercase',
+            marginBottom: '4px',
+            userSelect: 'none',
+          }}>
+            3D
+          </div>
+
+          {/* Power / Enable toggle */}
+          <button
+            onClick={handleToggleTools}
+            title={toolsEnabled ? 'Disable 3D Tools' : 'Enable 3D Tools'}
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              border: `1px solid ${toolsEnabled ? 'rgba(74,181,176,0.8)' : 'rgba(255,255,255,0.12)'}`,
+              background: toolsEnabled ? 'rgba(74,181,176,0.25)' : 'rgba(255,255,255,0.05)',
+              color: toolsEnabled ? '#4ab5b0' : 'rgba(255,255,255,0.45)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              fontSize: '18px',
+              boxShadow: toolsEnabled ? '0 0 12px rgba(74,181,176,0.3)' : 'none',
+            }}
+          >
+            ⏻
+          </button>
+
+          {/* Divider */}
+          <div style={{
+            width: '28px',
+            height: '1px',
+            background: 'rgba(255,255,255,0.08)',
+            margin: '4px 0',
+          }} />
+
+          {/* Tool buttons */}
+          {([
+            { mode: 'translate', icon: '↔', label: 'Move', key: 'G' },
+            { mode: 'rotate', icon: '↻', label: 'Rotate', key: 'R' },
+            { mode: 'scale', icon: '⤢', label: 'Scale', key: 'S' },
+          ] as const).map(({ mode, icon, label, key }) => {
+            const isActive = toolsEnabled && activeMode === mode;
+            return (
+              <button
+                key={mode}
+                onClick={() => toolsEnabled && handleSetMode(mode)}
+                title={`${label} (${key})`}
+                style={{
+                  width: '40px',
+                  height: '44px',
+                  borderRadius: '10px',
+                  border: `1px solid ${isActive ? 'rgba(74,181,176,0.7)' : 'rgba(255,255,255,0.08)'}`,
+                  background: isActive ? 'rgba(74,181,176,0.2)' : 'rgba(255,255,255,0.04)',
+                  color: isActive ? '#4ab5b0' : toolsEnabled ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.22)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '2px',
+                  cursor: toolsEnabled ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.2s ease',
+                  boxShadow: isActive ? '0 0 10px rgba(74,181,176,0.2)' : 'none',
+                  fontSize: '14px',
+                }}
+              >
+                <span style={{ fontSize: '16px', lineHeight: 1 }}>{icon}</span>
+                <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.05em', opacity: 0.7 }}>{key}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* TOOLTIP CARD (POP-UP ABOVE MENU) */}

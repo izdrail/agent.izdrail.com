@@ -5,6 +5,7 @@ import { buildUrl } from "@/utils/buildUrl";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { CSS2DRenderer, CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer";
+import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 
 /**
  * three.js
@@ -22,6 +23,9 @@ export class Viewer {
   private _glbScene?: THREE.Group;
   private _keys: Record<string, boolean> = {};
   private _labelRenderer?: CSS2DRenderer;
+  private _transformControls?: TransformControls;
+  private _gridHelper?: THREE.GridHelper;
+  private _axesHelper?: THREE.AxesHelper;
 
   public onWorldInteraction?: (id: string) => void;
   private _raycaster: THREE.Raycaster;
@@ -53,13 +57,27 @@ export class Viewer {
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambientLight);
 
+    // 3D Environment Helpers (Grid, Axes, Fog)
+    this._gridHelper = new THREE.GridHelper(100, 100, 0x888888, 0x444444);
+    scene.add(this._gridHelper);
+
+    this._axesHelper = new THREE.AxesHelper(10);
+    scene.add(this._axesHelper);
+
     // animate
     this._clock = new THREE.Clock();
     this._clock.start();
 
     // keyboard listeners
     if (typeof window !== "undefined") {
-      window.addEventListener("keydown", (e) => (this._keys[e.code] = true));
+      window.addEventListener("keydown", (e) => {
+        this._keys[e.code] = true;
+        if (this._transformControls) {
+          if (e.code === 'KeyG') this._transformControls.setMode('translate');
+          if (e.code === 'KeyR') this._transformControls.setMode('rotate');
+          if (e.code === 'KeyS') this._transformControls.setMode('scale');
+        }
+      });
       window.addEventListener("keyup", (e) => (this._keys[e.code] = false));
       window.addEventListener("pointerdown", this._onPointerDown.bind(this));
     }
@@ -136,6 +154,11 @@ export class Viewer {
           this._glbScene.position.set(position.x, position.y, position.z);
 
           this._scene.add(this._glbScene);
+
+          if (this._transformControls) {
+            this._transformControls.attach(this._glbScene);
+          }
+
           console.log("GLB model loaded:", url);
           resolve();
         },
@@ -186,6 +209,16 @@ export class Viewer {
     this._cameraControls.target.set(0, 0, 0);
     this._cameraControls.screenSpacePanning = true;
     this._cameraControls.update();
+
+    // TransformControls (Blender-like gizmo)
+    this._transformControls = new TransformControls(this._camera, this._renderer.domElement);
+    this._transformControls.addEventListener('dragging-changed', (event) => {
+      // Disable orbit controls while using transform controls
+      if (this._cameraControls) {
+        this._cameraControls.enabled = !event.value;
+      }
+    });
+    this._scene.add(this._transformControls);
 
     window.addEventListener("resize", () => {
       this.resize();
@@ -365,4 +398,20 @@ export class Viewer {
       this._labelRenderer.render(this._scene, this._camera);
     }
   };
+
+  public setTransformMode(mode: 'translate' | 'rotate' | 'scale') {
+    if (this._transformControls) {
+      this._transformControls.setMode(mode);
+    }
+  }
+
+  public toggleTools(visible: boolean) {
+    if (this._gridHelper) this._gridHelper.visible = visible;
+    if (this._axesHelper) this._axesHelper.visible = visible;
+    if (this._transformControls) {
+      this._transformControls.visible = visible;
+      this._transformControls.enabled = visible;
+    }
+  }
 }
+
